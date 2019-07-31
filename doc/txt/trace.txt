@@ -13,7 +13,6 @@ This can actually be useful for tracking the operation of the HL engine,
 as well as that of a particular HL game mod.
 
 It recognizes the following server cvars:
-
    // Tracing debug levels; higher values log increasingly frequent routines.
    // Currently 0-50.  See "api_info.cpp" for the debug levels of various
    // functions.
@@ -37,7 +36,6 @@ It recognizes the following server cvars:
 
 
 and the following server commands:
-
    // Enable tracing of a given routine, independent of "trace_*" level.
    // See the list of routine names in "api_info.cpp".  Case is insignificant.
    trace set <APIroutine>

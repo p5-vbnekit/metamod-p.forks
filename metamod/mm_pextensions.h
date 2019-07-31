@@ -42,47 +42,47 @@
 		2. Meta_PExtGiveFnptrs is called with interface version 'META_PEXT_VERSION'
 		   and pointer to extension function table.
 		3. Meta_PExtGiveFnptrs should return plugin's interface version.
-		4. !NOTE! Metamod will not stop loading plugin even if plugin returns 
+		4. !NOTE! Metamod will not stop loading plugin even if plugin returns
 		   interface version greater than current. Plugin should disable itself in
 		   this kind of situation.
-	
+
 	Example:
 		#include "mm_pextensions.h"
-		
+
 		pextension_funcs_t *gpMetaPExtFuncs;
-		
+
 		int Meta_PExtGiveFnptrs(int interfaceVersion, pextension_funcs_t *pMetaPExtFuncs) {
 			if(interfaceVersion < META_PEXT_VERSION) {
 				LOG_DEVELOPER(PLID, "Error! Metamod is too old, please update!");
 				gpMetaPExtFuncs = NULL;
-			
+
 				return(META_PEXT_VERSION);
 			}
-			
+
 			gpMetaPExtFuncs = pMetaPExtFuncs;
-			
+
 			return(META_PEXT_VERSION);
 		}
-	
+
 	Callback functions:
 		- int PEXT_LOAD_PLUGIN_BY_NAME(PLID, const char *cmdline, PLUG_LOADTIME now, void **plugin_handle);
-			Parses 'cmdline' as metamod would parse 'meta load <cmdline>' and loads found 
-			plugin. If 'plugin_handle' is set, metamod writes module handle of loaded 
+			Parses 'cmdline' as metamod would parse 'meta load <cmdline>' and loads found
+			plugin. If 'plugin_handle' is set, metamod writes module handle of loaded
 			plugin at it.
 			Returns zero on success.
 			For error codes see 'META_ERRNO' in 'types_meta.h'.
-		
+
 		- int PEXT_UNLOAD_PLUGIN_BY_NAME(PLID, const char *cmdline, PLUG_LOADTIME now, PL_UNLOAD_REASON reason);
-			Parses 'cmdline' as metamod would parse 'meta unload <cmdline>' and 
+			Parses 'cmdline' as metamod would parse 'meta unload <cmdline>' and
 			unloads found plugin.
 			Returns zero on success.
 			For error codes see 'META_ERRNO' in 'types_meta.h'.
-		
+
 		- int PEXT_UNLOAD_PLUGIN_BY_HANDLE(PLID, void *plugin_handle, PLUG_LOADTIME now, PL_UNLOAD_REASON reason);
 			Unloads plugin with 'plugin_handle'.
 			Returns zero on success.
 			For error codes see 'META_ERRNO' in 'types_meta.h'.
-		
+
 		!NOTE! Plugin cannot unload itself!
 */
 
@@ -108,9 +108,9 @@ typedef struct pextension_funcs_s {
 #define PEXT_UNLOAD_PLUGIN_BY_HANDLE	(*gpMetaPExtFuncs->pfnUnloadMetaPluginByHandle)
 
 // Give plugin extension function table.
-C_DLLEXPORT int Meta_PExtGiveFnptrs(int interfaceVersion, 
+C_DLLEXPORT int Meta_PExtGiveFnptrs(int interfaceVersion,
 		pextension_funcs_t *pMetaPExtFuncs);
-typedef int (*META_GIVE_PEXT_FUNCTIONS_FN) (int interfaceVersion, 
+typedef int (*META_GIVE_PEXT_FUNCTIONS_FN) (int interfaceVersion,
 		pextension_funcs_t *pMetaPExtFuncs);
 
 #endif /* MM_PEXTENSIONS_H */

@@ -63,7 +63,7 @@
    <li><a href=#InconsistentFile>InconsistentFile</a>
    <li><a href=#AllowLagCompensation>AllowLagCompensation</a>
 </ul>
-   
+
 <hr><h3><tt><a name="GameDLLInit">GameDLLInit</a></tt></h3>
 <i>from dlls/game.cpp:</i><br>
 <dd><tt>void GameDLLInit(void);</tt><p>
@@ -289,7 +289,7 @@
 <dd><tt>void PlayerCustomization(edict_t *pEntity, customization_t *pCust);</tt><p>
 <blockquote><tt>
 	Notifies .dll of new customization for player.<br>
-	A new player customization has been registered on the server. 
+	A new player customization has been registered on the server.
 	UNDONE: This only sets the # of frames of the spray can logo animation
 	right now.<br>
 </tt></blockquote>
@@ -416,14 +416,14 @@
 	State is the server maintained copy of the state info that is
 	transmitted to the client.  A MOD could alter values copied into state
 	to send the "host" a different look for a particular entity update,
-	etc.  
+	etc.
 	<p>
 	Arguments 'e' and 'ent' are the entity that is being added to the
 	update, if 1 is returneds.  Host is the player's edict of the player
 	whom we are sending the update to.  Player is 1 if the ent/e is a
 	player and 0 otherwise.  Argument 'pSet' is either the PAS or PVS that
 	we previous set up.  We can use it to ask the engine to filter the
-	entity against the PAS or PVS.  
+	entity against the PAS or PVS.
 	<p>
 	We could also use the pas/ pvs that we set in SetupVisibility, if we
 	wanted to.  Caching the value is valid in that case, but still only for

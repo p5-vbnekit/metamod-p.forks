@@ -20,18 +20,18 @@ For newer changes, see Metamod-P git repository commit log at:
 
 2007/08/12      1.19p32
 [Patch: Metamod-P v32 by Jussi Kivilinna]
- - Changed GCC optimization flags based on performance monitoring results, 
+ - Changed GCC optimization flags based on performance monitoring results,
    replaced '-O3 -funroll-all-loops' with '-O2'.
  - Made 'Fix for engine_api varargs log calls with very long log string'
    default on in sources so that MSVC compile is 1:1 with GCC compile.
- - Made 'optimizations on META_DEBUG' always on in sources so that MSVC 
+ - Made 'optimizations on META_DEBUG' always on in sources so that MSVC
    compile is 1:1 with GCC compile.
  - Fixed compiling META_PERFMON build with MSVC.
  - Fixed compiling with MSVC fixed by Nikolay "The Storm" Baklicharov.
- - [linux] Remake of dynamic linkent code. Parse dlsym function trampoline 
+ - [linux] Remake of dynamic linkent code. Parse dlsym function trampoline
    instead of parsing ELF structures.
  - [linux] Dropped AMD64 support since Valve doesn't support their AMD64 build
-   anymore and I don't have access to AMD64 machine to port new dynamic 
+   anymore and I don't have access to AMD64 machine to port new dynamic
    linkent code. Sorry!
 
 2007/04/05      1.19p31
@@ -54,7 +54,7 @@ For newer changes, see Metamod-P git repository commit log at:
 [Patch: Metamod-P v28 by Jussi Kivilinna]
  - Removed use of __VA_ARGS__ (should be easy to port to msvc now).
  - Reduced size of extra engineapi function slots from 128 to 16.
- - Clean up code, removed use of likely()/unlikely() macros in places where 
+ - Clean up code, removed use of likely()/unlikely() macros in places where
    they don't give extra performance.
  - Added MakeRequestID() API
  - Added api for using hook tables from plugins (thanks to BAILOPAN)
@@ -65,16 +65,16 @@ For newer changes, see Metamod-P git repository commit log at:
  - Fixed newapi functions not active on mods that don't use newapi.
  - [win32] New is_gamedll() code.
  - [linux] Fix for buggy DT_HASH in library walker function.
- - Following features were removed to improve stability. These changes were 
+ - Following features were removed to improve stability. These changes were
    not present in metamod.org version:
-      - Removed fix for engine_api varargs log calls with very long log 
-        string. 
+      - Removed fix for engine_api varargs log calls with very long log
+        string.
       - Removed optimized version of GET_USER_MSG_ID() for metamod-bots.
 
 2005/08/24      1.18p25
 [Patch: Metamod-P v25 by Jussi Kivilinna]
  - Added mutil::IsQueryingClientCvar().
- - Added support for new HLSDK-API functions: 
+ - Added support for new HLSDK-API functions:
       - enginefuncs_t::pfnQueryClientCvarValue()
       - NEW_DLL_FUNCTIONS::pfnCvarValue()
  - Fixed reloading and unloading of plugins that haven't been loaded
@@ -88,7 +88,7 @@ For newer changes, see Metamod-P git repository commit log at:
  - Minor performance tweaks.
       - Changed to use mingw-gcc 3.4.2rc, mingw-gcc 3.4.4rc emited extra code
         to zero stack memory which lowered performance.
-      - Changed API hooks to give structure offset to main API hook function 
+      - Changed API hooks to give structure offset to main API hook function
         instead of pointer, which increases performance on linux-i586.
  - Raised META_INTERFACE_VERSION to "5:12".
  - Fixed metamod_version cvar to show "1.18p25" instead of "1.18.0p25".
@@ -179,7 +179,7 @@ For newer changes, see Metamod-P git repository commit log at:
 
 2004/11/27      1.17.3p13
 [Patch: All-Mod-Support v13 by Jussi Kivilinna]
- - New callback API for plugins to load/unload other plugins. See 
+ - New callback API for plugins to load/unload other plugins. See
    'mm_pextensions.h'.
  - Fixed a minor memory leak when reloading plugins.
  - Minor fixes on 'memory write detection'.
@@ -214,26 +214,26 @@ For newer changes, see Metamod-P git repository commit log at:
 
 2004/08/31      1.17.2p10
 [Patch: All-Mod-Support v10 by Jussi Kivilinna]
- - Merged updates from Metamod 1.17.2, 
+ - Merged updates from Metamod 1.17.2,
    http://www.sourceforge.net/projects/metamod/
       - Fixed a memory leak the size of the gamedll when extracting a missing
-        gamedll from the cache file on Windows Steam servers. 
+        gamedll from the cache file on Windows Steam servers.
         Found by Wei Mingzhi.
       - Made game directory lookup case-insensitive.
-      - Added MOD recognition for The Terrorist Revenge 0.2.1, Pirates, 
-        Vikings and Knights Beta 2.1, CSV15 (Counter-Strike 1.5 for Steam), 
+      - Added MOD recognition for The Terrorist Revenge 0.2.1, Pirates,
+        Vikings and Knights Beta 2.1, CSV15 (Counter-Strike 1.5 for Steam),
         Adrenaline Gamer 6.5 and up.
       - Changed MOD recognition for Adrenaline Gamer 3.x. The 3.x version of
         the MOD is now being deprecated and support will be removed from a
         future version of Metamod. It can currently still be used by renaming
         the game directory from "ag" to "ag3" or by explicitly specifying the
         gamedll.
-      - Improved parsing of plugins.ini file to not report errors on empty 
+      - Improved parsing of plugins.ini file to not report errors on empty
         lines and commented out lines that start with whitespace.
       - Added "lin32" and "lin64" keywords in addition to "linux" keyword for
         plugins.ini file to support using the same file for the same game on
         both 32bit and 64bit servers. The "lin32" and "lin64" keywords
-        override the "linux" keyword when used on the same plugin. Do not 
+        override the "linux" keyword when used on the same plugin. Do not
         use "linux" when using "lin32" and/or "lin64" keywords for the same
         plugin.
 
@@ -259,17 +259,17 @@ For newer changes, see Metamod-P git repository commit log at:
 2004/06/06      1.17.1p7
 [Patch: All-Mod-Support v7 by Jussi Kivilinna]
  - Official support for All-Mod-Support versions at http://koti.mbnet.fi/axh/
- - Merged updates from Metamod 1.17.1, 
+ - Merged updates from Metamod 1.17.1,
    http://www.sourceforge.net/projects/metamod/
       - Added MOD recognition for Hostile Intent 1.1.
       - Added MOD recognition for Natural Selection Beta 3.0.
       - Added MOD recognition for CS13.
       - Added MOD recognition Rocket Crowbar 2.
       - Added MOD recognition Counter-Strike:Condition Zero.
-      - On Windows Steam servers extract the gamedll file from the cache file 
+      - On Windows Steam servers extract the gamedll file from the cache file
         if it is missing in the dlls directory.
  - Added Patch-messages.
- - Added '+localinfo mm_autodetect <yes/no>' setting for disabling 
+ - Added '+localinfo mm_autodetect <yes/no>' setting for disabling
    autodetection of gamedll.
  - Added 'autodetect' config.ini setting.
  - Small tweaks and optimizations at various different places.
@@ -287,7 +287,7 @@ For newer changes, see Metamod-P git repository commit log at:
 
 2004/04/25	1.17p3
 [Patch: All-Mod-Support v3 by Jussi Kivilinna]
- - Automatically searchs for gameDll for new mods that are not included in 
+ - Automatically searchs for gameDll for new mods that are not included in
    internal mod-list.
  - [linux] Cleaned up osdep_linkent_linux.cpp, might work with x86-64 build
    now (not tested).
@@ -326,7 +326,7 @@ For newer changes, see Metamod-P git repository commit log at:
  - Added mod recognition and entities for HL-Rally vBeta 1.0, Kanonball
    v1.01, Over Ground vBeta 1.0, Project Timeless vBeta 1.0, Underworld
    Bloodline v2.0.
- - Additional entities for The Battle Grounds v1.2.1, Firearms v2.8. 
+ - Additional entities for The Battle Grounds v1.2.1, Firearms v2.8.
  - Additional entities "env_rain" and "env_snow" used on some CS maps.
  - Added "metamod_version" cvar that can be queried from game browser
    clients.
@@ -355,7 +355,7 @@ For newer changes, see Metamod-P git repository commit log at:
    (supposed) "real" dllpathname, ie in case gamedll is overridden.  Needed
    specifically for plugin "SinglePlayer".
  - Raised META_INTERFACE_VERSION to 5:10, for GINFO_REALDLL_FULLPATH.
- - Now recognizes "/dev/null" as valid for path options (pluginsfile, 
+ - Now recognizes "/dev/null" as valid for path options (pluginsfile,
    execcfg, configini, etc), for when an empty file _is_ desired.
  - Fixed loading of plugins.ini to detect duplicate plugins (by full
    pathname).
@@ -603,7 +603,7 @@ For newer changes, see Metamod-P git repository commit log at:
    solve "Couldn't find api call: dod.dll:ShouldCollide" errors with DoD
    b2.
  - Changed default for newapi ShouldCollide() from 0 to 1, per Mugsy@DoD's
-   observations.  
+   observations.
 
 2002/02/03	1.11.1
  - Mod recognition and entities for Snow-War 1.0, and Earth`s Special
@@ -761,7 +761,7 @@ For newer changes, see Metamod-P git repository commit log at:
  - fixed a couple of entities for HL Paintball.
  - added links.html to docs, a set of links/URLs and books that I found
    helpful for the project.
- - added to META_INTERFACE_VERSION comments to include associated metmaod 
+ - added to META_INTERFACE_VERSION comments to include associated metmaod
    version for each change.
  - additional data checking in various MPluginList routines.
  - added 'const' to various function arguments to more properly reflect
@@ -950,7 +950,7 @@ For newer changes, see Metamod-P git repository commit log at:
 2001/03/07	1.0-rc2
  - fixed missing WINAPI in mm_trace GiveFnptrsToDll
  - added HTML version of docs
- - description field in metamod.ini is now optional: 
+ - description field in metamod.ini is now optional:
     - uses "name" from plugin info for desc by default
     - desc field in metamod.ini will override this
     - "meta list" shows just desc, rather than desc and name

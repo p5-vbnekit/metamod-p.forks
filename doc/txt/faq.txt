@@ -53,7 +53,7 @@ How do I do (something) in a Metamod plugin?
     /botman/MOD_FAQ.shtml)). Once you figure out how it would normally be
     done in a Game Mod, figuring out how to do it in Metamod is relatively
     straightforward.
-   
+
     However, if you have questions on how to convert a piece of code from
     HLmod to Metamod plugin, then I can provide some pointers, or you can
     ask on the Metamod mailing list (groups.yahoo.com/group/metamod/). And
@@ -69,7 +69,7 @@ Is there a tutorial or example of how to write a Metamod plugin?
     function. The "wdmisc" plugin provides a couple of basic useful
     features. You can also look at several of the other plugins out there
     for more examples.
-   
+
     Note that the example plugins in the Metamod sourcecode show how to
     use Metamod to interface with Half-Life code, but they mostly assume
     you already know how to write Half-Life code. If you need examples or
@@ -112,9 +112,9 @@ How about a port of Metamod to other engines like Q3, Unreal, etc?
     engines, although I believe most modern engines are now providing
     their own method for extensions or plugins, so that a third-party
     solution like Metamod wouldn't be necessary.
-   
+
     If Half-Life 2 ever sees the light of day, I expect I'd look seriously
-    at porting to that - unless, of course, Valve ends up providing their 
+    at porting to that - unless, of course, Valve ends up providing their
     own plugin framework themselves. :)
 
 --------------------------------------------------------------------------

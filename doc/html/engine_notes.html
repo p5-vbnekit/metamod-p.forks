@@ -591,7 +591,7 @@
 <blockquote>
 	Begin a network message to send to the client.
 	<br><b><tt>msg_type</tt></b> should be a number returned by <a
-	href="#RegUserMsg">RegUserMsg</a>.  
+	href="#RegUserMsg">RegUserMsg</a>.
 	<br><b><tt>msg_dest</tt></b> is one of:
 	<ul>
 	<li> <b><tt>MSG_BROADCAST</tt></b> - "unreliable to all"
@@ -847,7 +847,7 @@
 <dd><tt>INDEXENT()</tt>
 <p><i>comments:</i><br>
 <blockquote>
-	Returns the edict for the player in the given server slot (ie 1 to 
+	Returns the edict for the player in the given server slot (ie 1 to
 	maxplayers).
 </blockquote>
 
@@ -878,7 +878,7 @@
 	Returns the number assigned for the network message, to be used with <a
 	href="#MessageBegin">MessageBegin</a>.  It appears that message
 	ID's 1-63 are reserved for the Engine, and that GameDLL messages are
-	allocated IDs starting at 64.  The SDK <tt>dlls/util.h</tt> appears to 
+	allocated IDs starting at 64.  The SDK <tt>dlls/util.h</tt> appears to
 	define six Engine messages:
 	<ul>
 		<li> <tt>SVC_TEMPENTITY = 23</tt>
@@ -967,7 +967,7 @@
 <p><i>comments:</i><br>
 <blockquote>
 	Returns the arguments for a command, as a single string.  The command
-	string itself is not included, and must be queried with 
+	string itself is not included, and must be queried with
 	<a href="#Cmd_Argv"><tt>CMD_ARGV(0)</tt></a>.  For use in <a
 	href="dllapi_notes.html#ClientCommand">DLLAPI ClientCommand</a>, or in
 	the function provided to <a
@@ -1212,8 +1212,8 @@
 	accessible from the console by those two commands, respectively.
 	<p>
 	Calling <tt>GetInfoKeyBuffer(NULL)</tt> will return the
-	<b>localinfo</b> buffer.  Calling 
-	<tt>GetInfoKeyBuffer(PEntityOfEntIndex(0))</tt>, ie passing the entity 
+	<b>localinfo</b> buffer.  Calling
+	<tt>GetInfoKeyBuffer(PEntityOfEntIndex(0))</tt>, ie passing the entity
 	of slot 0, will return the <b>serverinfo</b> buffer.
 </blockquote>
 
@@ -1545,7 +1545,7 @@
 <blockquote>
 	Registers a new server console command.  When the given command string
 	is typed at the console, the given function will be called.  Arguments
-	for the command can be retrieved in the function with 
+	for the command can be retrieved in the function with
 	<a href="#Cmd_Args">Cmd_Args</a>, <a href="#Cmd_Argv">Cmd_Argv</a>, and
 	<a href="#Cmd_Argc">Cmd_Argc</a>.
 </blockquote>
@@ -1554,7 +1554,7 @@
 <i>from engine/eiface.h:</i><br>
 <dd><tt>qboolean Voice_GetClientListening)(int iReceiver, int iSender);</tt>
 <blockquote><tt>
-	For voice communications, set which clients hear each other.  NOTE: these 
+	For voice communications, set which clients hear each other.  NOTE: these
 	functions take player entity indices (starting at 1).
 </tt></blockquote>
 <p><i>comments:</i><br>
@@ -1566,7 +1566,7 @@
 <i>from engine/eiface.h:</i><br>
 <dd><tt>qboolean Voice_SetClientListening)(int iReceiver, int iSender, qboolean bListen);</tt>
 <blockquote><tt>
-	For voice communications, set which clients hear each other.  NOTE: these 
+	For voice communications, set which clients hear each other.  NOTE: these
 	functions take player entity indices (starting at 1).
 </tt></blockquote>
 <p><i>comments:</i><br>
@@ -1577,7 +1577,7 @@
 <hr><h3><tt><a name="GetPlayerAuthId">GetPlayerAuthId</a></tt></h3>
 <i>from engine/eiface.h:</i><br>
 <dd><tt>const char *GetPlayerAuthId(edict_t *e);</tt>
-<p><i>From Eric Smith &lt;EricS@valvesoftware.com&gt; on <a href="http://list.valvesoftware.com/pipermail/hlcoders/2002-April/002865.html">hlcoders</a>:</i> 
+<p><i>From Eric Smith &lt;EricS@valvesoftware.com&gt; on <a href="http://list.valvesoftware.com/pipermail/hlcoders/2002-April/002865.html">hlcoders</a>:</i>
 <blockquote><tt>
 	The AuthID is a way for applications/mods to get the Authentication ID
 	(uniqueID) for a player.  The AuthID can be a WonID or a SteamID.  The
@@ -1605,7 +1605,7 @@
 </tt></blockquote>
 <p><i>comments:</i><br>
 <blockquote>
-	Added for HL 1109; no SDK update.  
+	Added for HL 1109; no SDK update.
 </blockquote>
 
 <hr><h3><tt><a name="SequenceGet">SequenceGet</a></tt></h3>
@@ -1613,7 +1613,7 @@
 <dd><tt>void *SequenceGet(const char *fileName, const char *entryName);</tt>
 <p><i>comments:</i><br>
 <blockquote>
-	Added for HL 1xxx; no SDK update.  
+	Added for HL 1xxx; no SDK update.
 </blockquote>
 
 <hr><h3><tt><a name="SequencePickSentence">SequencePickSentence</a></tt></h3>
@@ -1622,7 +1622,7 @@
 int *picked);</tt>
 <p><i>comments:</i><br>
 <blockquote>
-	Added for HL 1xxx; no SDK update.  
+	Added for HL 1xxx; no SDK update.
 </blockquote>
 
 <hr><h3><tt><a name="GetFileSize">GetFileSize</a></tt></h3>
@@ -1630,7 +1630,7 @@ int *picked);</tt>
 <dd><tt>int GetFileSize(char *filename);</tt>
 <p><i>comments:</i><br>
 <blockquote>
-	Added for HL 1xxx; no SDK update.  
+	Added for HL 1xxx; no SDK update.
 </blockquote>
 
 <hr><h3><tt><a name="GetApproxWavePlayLen">GetApproxWavePlayLen</a></tt></h3>
@@ -1638,7 +1638,7 @@ int *picked);</tt>
 <dd><tt>unsigned int GetApproxWavePlayLen(const char *filepath);</tt>
 <p><i>comments:</i><br>
 <blockquote>
-	Added for HL 1xxx; no SDK update.  
+	Added for HL 1xxx; no SDK update.
 </blockquote>
 
 <hr><h3><tt><a name="IsCareerMatch">IsCareerMatch</a></tt></h3>
@@ -1646,7 +1646,7 @@ int *picked);</tt>
 <dd><tt>int IsCareerMatch(void);</tt>
 <p><i>comments:</i><br>
 <blockquote>
-	Added for HL 1xxx; no SDK update.  
+	Added for HL 1xxx; no SDK update.
 </blockquote>
 
 <hr><h3><tt><a name="GetLocalizedStringLength">GetLocalizedStringLength</a></tt></h3>
@@ -1654,7 +1654,7 @@ int *picked);</tt>
 <dd><tt>int GetLocalizedStringLength(const char *label);</tt>
 <p><i>comments:</i><br>
 <blockquote>
-	Added for HL 1xxx; no SDK update.  
+	Added for HL 1xxx; no SDK update.
 </blockquote>
 
 <hr><h3><tt><a name="RegisterTutorMessageShown">RegisterTutorMessageShown</a></tt></h3>
@@ -1662,7 +1662,7 @@ int *picked);</tt>
 <dd><tt>void RegisterTutorMessageShown(int mid);</tt>
 <p><i>comments:</i><br>
 <blockquote>
-	Added for HL 1xxx; no SDK update.  
+	Added for HL 1xxx; no SDK update.
 </blockquote>
 
 <hr><h3><tt><a name="GetTimesTutorMessageShown">GetTimesTutorMessageShown</a></tt></h3>
@@ -1670,7 +1670,7 @@ int *picked);</tt>
 <dd><tt>int GetTimesTutorMessageShown(int mid);</tt>
 <p><i>comments:</i><br>
 <blockquote>
-	Added for HL 1xxx; no SDK update.  
+	Added for HL 1xxx; no SDK update.
 </blockquote>
 
 <hr><h3><tt><a name="ProcessTutorMessageDecayBuffer">ProcessTutorMessageDecayBuffer</a></tt></h3>
@@ -1678,7 +1678,7 @@ int *picked);</tt>
 <dd><tt>void ProcessTutorMessageDecayBuffer(int *buffer, int bufferLength);</tt>
 <p><i>comments:</i><br>
 <blockquote>
-	Added for HL 1xxx; no SDK update.  
+	Added for HL 1xxx; no SDK update.
 </blockquote>
 
 <hr><h3><tt><a name="ConstructTutorMessageDecayBuffer">ConstructTutorMessageDecayBuffer</a></tt></h3>
@@ -1686,7 +1686,7 @@ int *picked);</tt>
 <dd><tt>void ConstructTutorMessageDecayBuffer(int *buffer, int bufferLength);</tt>
 <p><i>comments:</i><br>
 <blockquote>
-	Added for HL 1xxx; no SDK update.  
+	Added for HL 1xxx; no SDK update.
 </blockquote>
 
 <hr><h3><tt><a name="ResetTutorMessageDecayData">ResetTutorMessageDecayData</a></tt></h3>
@@ -1694,7 +1694,7 @@ int *picked);</tt>
 <dd><tt>void ResetTutorMessageDecayData(void);</tt>
 <p><i>comments:</i><br>
 <blockquote>
-	Added for HL 1xxx; no SDK update.  
+	Added for HL 1xxx; no SDK update.
 </blockquote>
 
 

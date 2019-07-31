@@ -18,7 +18,7 @@ Similar to the <a href="#commands">server console interface</a>, clients
 can also issue commands to Metamod, of the following form:
 <ul>
 
-<li> <b><tt>meta version</tt></b> - displays version information about the 
+<li> <b><tt>meta version</tt></b> - displays version information about the
 	Metamod instance currently running on the server, ie:
 	<p>
 	<tt>Metamod v1.21p38  2018/02/11 (5:13)
@@ -30,7 +30,7 @@ can also issue commands to Metamod, of the following form:
         <br>compiled: Feb 11 2017, xx:xx:xx EET (optimized)
 	</tt>
 
-<p><li> <b><tt>meta list</tt></b> - displays information about the list of 
+<p><li> <b><tt>meta list</tt></b> - displays information about the list of
 	currently running plugins, ie:
 	<p>
 	<tt>Currently running plugins:
@@ -101,7 +101,7 @@ you want to load.
 </ul>
 
 <p><br><a name=configuration>
-<h2>Configuration 
+<h2>Configuration
 </h2></a>
 
 Metamod has several ways to provide config options, partially because it
@@ -129,11 +129,11 @@ uses, (listed in order of priority), where "<tt><i>$gamedir</i></tt>"
 indicates the game directory, ie "cstrike":
 
 <ul>
-<li> <tt>+<a href="#localinfo">localinfo</a> mm_configfile</tt> 
+<li> <tt>+<a href="#localinfo">localinfo</a> mm_configfile</tt>
 		<i>&lt;file&gt;</i>
 
 <p>
-<li> <tt>+<a href="#localinfo">localinfo</a> mm_pluginsfile</tt> 
+<li> <tt>+<a href="#localinfo">localinfo</a> mm_pluginsfile</tt>
 		<i>&lt;file&gt;</i>
 <li> <tt><a href="#config.ini">config.ini</a> option: plugins_file</tt>
 		<i>&lt;file&gt;</i>
@@ -141,7 +141,7 @@ indicates the game directory, ie "cstrike":
 <li> <tt><i>$gamedir</i>/metamod.ini</tt>
 
 <p>
-<li> <tt>$<a href="#localinfo">localinfo</a> mm_execcfg</tt> 
+<li> <tt>$<a href="#localinfo">localinfo</a> mm_execcfg</tt>
 		<i>&lt;file&gt;</i>
 <li> <tt><a href="#config.ini">config.ini</a> option: exec_cfg</tt>
 		<i>&lt;file&gt;</i>
@@ -149,11 +149,11 @@ indicates the game directory, ie "cstrike":
 <li> <tt><i>$gamedir</i>/metaexec.cfg</tt>
 
 <p>
-<li> <tt>$<a href="#localinfo">localinfo</a> mm_gamedll</tt> 
+<li> <tt>$<a href="#localinfo">localinfo</a> mm_gamedll</tt>
 		<i>&lt;file&gt;</i>
 <li> <tt><a href="#config.ini">config.ini</a> option: gamedll</tt>
 		<i>&lt;file&gt;</i>
-<li> <tt><strike><i>$gamedir</i>/metagame.ini</strike></tt> 
+<li> <tt><strike><i>$gamedir</i>/metagame.ini</strike></tt>
 			<i><b>-- No longer supported.</b></i>
 </ul>
 
@@ -176,7 +176,7 @@ plugin to load:
 
 <ul>
 	<li><i>Platform</i> is a keyword, either <tt>"<b>linux</b>"</tt> or
-	<tt>"<b>win32</b>"</tt>.  
+	<tt>"<b>win32</b>"</tt>.
 
 	<p><li><i>Filepath</i> is a path to the DLL/so file.  Relative paths
 	are from the game dir; absolute paths are also valid.  Paths should use
@@ -279,7 +279,7 @@ and examples of usage:
 
    <p><li> <tt><b>debuglevel</b> <i>&lt;number&gt;</i></tt>
         <p> where &lt;number&gt; is an integer, 0 and up.
-        <br> Sets the initial debugging level for metamod (same as cvar 
+        <br> Sets the initial debugging level for metamod (same as cvar
 		     "meta_debug").
         <br> Default is normally 0.  If hlds is run with "-dev", default is 3.
         <br> Overridden by: <a href="#localinfo">+localinfo</a> <a
@@ -315,7 +315,7 @@ and examples of usage:
 
    <p><li> <tt><b>exec_cfg</b> <i>&lt;path&gt;</i></tt>
         <p> where &lt;path&gt; is a path relative to the gamedir.
-		    <b>NOTE!</b> This <i>cannot</i> be an absolute path, as hlds will 
+		    <b>NOTE!</b> This <i>cannot</i> be an absolute path, as hlds will
 			not "exec" absolute pathnames.
         <br> Overrides the default filename containing hlds commands to run
 		     just after loading Metamod.
@@ -329,14 +329,12 @@ and examples of usage:
    <p><li> <tt><b>autodetect</b> <i>&lt;yes/no&gt;</i></tt>
         <p> Setting to disable or enable autodetection of gamedll. Extra feature for Metamod+All-Mod-Support Patch.
     	<br> Default is "yes".
-    	<br> Overridden by: <a href="#localinfo">+localinfo</a> <a 
-    			href="#mm_autodetect">mm_autodetect</a> &lt;yes/no&gt;
+    	<br> Overridden by: <a href="#localinfo">+localinfo</a> <a href="#mm_autodetect">mm_autodetect</a> &lt;yes/no&gt;
 
    <p><li> <tt><b>clientmeta</b> <i>&lt;yes/no&gt;</i></tt>
         <p> Setting to disable or enable Metamod's client commands, 'meta list' and 'meta version'. Extra setting for Metamod+All-Mod-Support Patch.
     	<br> Default is "yes".
-    	<br> Overridden by: <a href="#localinfo">+localinfo</a> <a 
-    			href="#mm_clientmeta">mm_clientmeta</a> &lt;yes/no&gt;
+    	<br> Overridden by: <a href="#localinfo">+localinfo</a> <a href="#mm_clientmeta">mm_clientmeta</a> &lt;yes/no&gt;
 
 </ul>
 
@@ -376,8 +374,8 @@ file "metaexec.cfg" under the gamedir, ie "<b>cstrike/metaexec.cfg</b>".
 <h2><strike>file: <tt>metagame.ini</tt></strike>
 </h2></a>
 
-<b>NOTE! This file is no longer supported!</b> -- use instead the 
-<a href="#localinfo">+localinfo</a> field 
+<b>NOTE! This file is no longer supported!</b> -- use instead the
+<a href="#localinfo">+localinfo</a> field
 "<a href="#mm_gamedll"><b>mm_gamedll</b></a>" or the <a
 href="#config.ini">config.ini</a> option <b>gamedll</b>.
 
@@ -417,11 +415,11 @@ Current localinfo fields recognized by Metamod:
 	file, either absolute path or path relative to the gamedir.
 
 	<p><a name=mm_autodetect><li><b>mm_autodetect</b></a> Specifies if 'autodetect of gamedll' should be enabled
-    or disabled. It's enabled by default. This is extra feature of 
+    or disabled. It's enabled by default. This is extra feature of
     Metamod+All-Mod-Support Patch.
-    
+
         <p><a name=mm_clientmeta><li><b>mm_clientmeta</b></a> Specifies if Metamod's client commands should be enabled
-    or disabled. It's enabled by default. This is extra setting of 
+    or disabled. It's enabled by default. This is extra setting of
     Metamod+All-Mod-Support Patch.
 
 	<p><a name=mm_gamedll><li><b>mm_gamedll</b></a> Specifies a game or Bot
@@ -525,7 +523,7 @@ several different states ('stat' column in the 'meta list' output):
   doesn't appear to be a valid Metamod plugin.
   <li><b><tt>OPENED</tt></b> - The plugin file was found, and is a valid
   Metamod plugin, and is ready to be loaded.
-  <li><b><tt>FAILED</tt></b> - The plugin file attempted to load or unload, 
+  <li><b><tt>FAILED</tt></b> - The plugin file attempted to load or unload,
   but couldn't complete for some reason.
   <li><b><tt>RUNNING</tt></b> - The plugin file was loaded and is active
   and running.

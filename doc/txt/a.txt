@@ -16,4 +16,3 @@ see Adding game support.
 |     By Jussi Kivilinna          |          |        |        |          |
 |     http://koti.mbnet.fi/axh/   |          |        |        |          |
 +---------------------------------+----------+--------+--------+----------+
-
