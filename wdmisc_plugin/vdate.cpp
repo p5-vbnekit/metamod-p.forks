@@ -36,16 +36,29 @@
 
 #include "info_name.h"		// for VNAME, VVERSION, etc
 
-
-// Grab data/time of compile.  The Makefile is set up to recompile this
+// Grab date/time of compile.  The Makefile is set up to recompile this
 // module before each link, so that this will always indicate the time the
 // library was compiled and linked.
 
 // This is in a separate file from vers_*, so it can be generically used by
 // multiple projects.
 
-char const *COMPILE_TIME=__DATE__ ", " __TIME__;
+#ifdef COMPILE_TZ
+char const *COMPILE_TZONE = COMPILE_TZ;
+#else
+char const *COMPILE_TZONE = "UTC";
+#endif
+
+#if defined(METAMOD_COMPILE_DATE) && defined(METAMOD_COMPILE_TIME)
+char const *COMPILE_TIME = METAMOD_COMPILE_DATE ", " METAMOD_COMPILE_TIME;
+#else
+char const *COMPILE_TIME = __DATE__ ", " __TIME__;
+#endif
 
 // Include a string for /usr/bin/ident.
 
+#if defined(METAMOD_COMPILE_DATE) && defined(METAMOD_COMPILE_TIME)
+char const *vstring="$Pg: " VNAME " -- " VVERSION " | " METAMOD_COMPILE_DATE " - " METAMOD_COMPILE_TIME " $";
+#else
 char const *vstring="$Pg: " VNAME " -- " VVERSION " | " __DATE__ " - " __TIME__ " $";
+#endif

@@ -45,14 +45,22 @@
 // This is in a separate file from vers_*, so it can be generically used by
 // multiple projects.
 
-char const *COMPILE_TIME=__DATE__ ", " __TIME__;
-
-#ifndef COMPILE_TZ
-	#define COMPILE_TZ "EET"
+#ifdef COMPILE_TZ
+char const *COMPILE_TZONE = COMPILE_TZ;
+#else
+char const *COMPILE_TZONE = "UTC";
 #endif
 
-char const *COMPILE_TZONE = COMPILE_TZ;
+#if defined(METAMOD_COMPILE_DATE) && defined(METAMOD_COMPILE_TIME)
+char const *COMPILE_TIME = METAMOD_COMPILE_DATE ", " METAMOD_COMPILE_TIME;
+#else
+char const *COMPILE_TIME = __DATE__ ", " __TIME__;
+#endif
 
 // Include a string for /usr/bin/ident.
 
+#if defined(METAMOD_COMPILE_DATE) && defined(METAMOD_COMPILE_TIME)
+char const *vstring="\n$Pg: " VNAME " -- " VVERSION " | " METAMOD_COMPILE_DATE " - " METAMOD_COMPILE_TIME " $\n";
+#else
 char const *vstring="\n$Pg: " VNAME " -- " VVERSION " | " __DATE__ " - " __TIME__ " $\n";
+#endif
