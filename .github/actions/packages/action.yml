@@ -1,0 +1,150 @@
+inputs:
+  build_directory_path: { required: false, default: "build" }
+  output_directory_path: { required: false, default: "packages" }
+  binaries_directory_path: { required: false, default: "binaries" }
+  template_directory_path: { required: false, default: "template" }
+
+runs:
+  using: "composite"
+  steps:
+    - name: installing system packages
+      shell: sudo sh -e {0}
+      run: |
+        # installing system packages
+        echo "::group::Installing packages" >&2
+        export DEBIAN_FRONTEND="noninteractive"
+        apt update --assume-yes
+        apt install --assume-yes python3 make zip xz-utils dos2unix
+        echo "::endgroup::" >&2
+
+    - id: get_config
+      name: generating config
+      shell: python3 {0} "${{ github.action_path }}"
+      run: |
+        # generating config
+
+        import os
+        import sys
+        import json
+        import tempfile
+
+        _current_action_path, = sys.argv[1:]
+        _current_action_path = os.path.realpath(os.path.normpath(_current_action_path))
+        try: assert bool(_current_action_path) and os.path.isdir(_current_action_path)
+        except AssertionError: raise ValueError(f"current_action_path: {_current_action_path}")
+
+        _inputs = json.loads("""
+        ${{ toJSON(inputs) }}
+        """.strip())
+        assert isinstance(_inputs, dict)
+
+        _build_directory_path = _inputs.pop("build_directory_path")
+        _output_directory_path = _inputs.pop("output_directory_path")
+        _binaries_directory_path = _inputs.pop("binaries_directory_path")
+        _template_directory_path = _inputs.pop("template_directory_path")
+
+        try: assert not _inputs
+        except AssertionError: raise ValueError(f"unexpected keys: {', '.join(_inputs.keys())}")
+
+        _python_modules_path = os.path.realpath(os.path.normpath(os.path.join(_current_action_path, "../..", "python/modules")))
+
+        try:
+          assert isinstance(_python_modules_path, str)
+          assert bool(_python_modules_path)
+          assert os.path.isdir(_python_modules_path)
+          sys.path.append(_python_modules_path)
+          from ci_helpers import log_group as _log_group_module
+          from ci_helpers import validators as _validators_module
+        except BaseException: raise RuntimeError(f"failed to import from {_python_modules_path}")
+
+        try: _validators_module.validate_text_argument(
+          _build_directory_path, require = True, require_inline = True, require_stripped = False
+        )
+        except BaseException: raise ValueError(f"build_directory_path: {_build_directory_path}")
+        _build_directory_path = os.path.abspath(os.path.normpath(_build_directory_path))
+
+        try: _validators_module.validate_text_argument(
+          _output_directory_path, require = True, require_inline = True, require_stripped = False
+        )
+        except BaseException: raise ValueError(f"output_directory_path: {_output_directory_path}")
+        _output_directory_path = os.path.abspath(os.path.normpath(_output_directory_path))
+
+        try:
+          _validators_module.validate_text_argument(
+            _binaries_directory_path, require = True, require_inline = True, require_stripped = False
+          )
+          assert os.path.isdir(_binaries_directory_path)
+        except BaseException: raise ValueError(f"binaries_directory_path: {_binaries_directory_path}")
+        _binaries_directory_path = os.path.abspath(os.path.normpath(_binaries_directory_path))
+
+        try:
+          _validators_module.validate_text_argument(
+            _template_directory_path, require = True, require_inline = True, require_stripped = False
+          )
+          assert os.path.isdir(_template_directory_path)
+        except BaseException: raise ValueError(f"template_directory_path: {_template_directory_path}")
+        _template_directory_path = os.path.abspath(os.path.normpath(_template_directory_path))
+
+        _collector = {
+          "python_modules_path": _python_modules_path,
+          "build_directory_path": _build_directory_path,
+          "output_directory_path": _output_directory_path,
+          "binaries_directory_path": _binaries_directory_path,
+          "template_directory_path": _template_directory_path
+        }
+
+        _result = tempfile.NamedTemporaryFile(mode = "w", suffix = ".config.json", delete = False)
+        with _result as _stream: json.dump(_collector, fp = _stream)
+        _result = _result.name
+
+        with _log_group_module.make(f"Config generated: {_result}"):
+          print(json.dumps(_collector, indent = 2), file = sys.stderr, flush = True)
+
+        with open(os.environ["GITHUB_OUTPUT"], "w+") as _stream:
+          print(f"result={_result}", file = _stream)
+
+    - name: generating packages
+      shell: python3 {0} "${{ steps.get_config.outputs.result }}"
+      run: |
+        # generating packages
+
+        import os
+        import sys
+        import json
+        import contextlib
+        import subprocess
+
+        _config, = sys.argv[1:]
+        assert isinstance(_config, str) and bool(_config)
+        with open(_config, "r") as _config: _config = json.load(_config)
+        assert isinstance(_config, dict) and bool(_config)
+
+        _build_directory_path = _config.pop("build_directory_path")
+        _output_directory_path = _config.pop("output_directory_path")
+        _binaries_directory_path = _config.pop("binaries_directory_path")
+        _template_directory_path = _config.pop("template_directory_path")
+
+        sys.path.append(_config.pop("python_modules_path"))
+        from ci_helpers import packages as _packages_module
+        from ci_helpers import log_group as _log_group_module
+
+        try: os.makedirs(_build_directory_path, exist_ok = False)
+        except FileExistsError:
+          assert os.path.isdir(_path)
+          try: assert not os.listdir(_build_directory_path)
+          except AssertionError: raise ValueError(f"build directory is not empty: {_build_directory_path}")
+
+        _makefile = _packages_module.produce_makefile(
+          build_directory_path = _build_directory_path,
+          output_directory_path = _output_directory_path,
+          binaries_directory_path = _binaries_directory_path,
+          template_directory_path = _template_directory_path
+        ).encode("utf-8")
+
+        _current_command = ("make", "--jobs", "--makefile=-", "--output-sync=recurse")
+        with (
+          _log_group_module.make(f"Executing {' '.join(_current_command)}"),
+          contextlib.redirect_stdout(sys.stderr)
+        ): subprocess.run(
+          _current_command, check = True, input = _makefile
+        )

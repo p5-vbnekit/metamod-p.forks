@@ -1,0 +1,317 @@
+inputs:
+  key: { required: true }
+  system: { required: true }
+  architecture: { required: true }
+  mingw_threads: { required: false }
+  compiler_flags: { required: false }
+  wine_runtime_path: { required: false }
+  build_directory_path:
+    required: false
+    default: build
+  source_directory_path:
+    required: false
+    default: build
+
+runs:
+  using: "composite"
+  steps:
+    - name: installing system packages
+      shell: sudo sh -e {0}
+      run: |
+        # installing system packages
+        echo "::group::Installing packages" >&2
+        export DEBIAN_FRONTEND="noninteractive"
+        apt update --assume-yes
+        apt install --assume-yes podman buildah python3
+        echo "::endgroup::" >&2
+
+    - id: get_config
+      name: generating config
+      shell: python3 {0} "${{ github.action_path }}"
+      run: |
+        # generating config
+
+        import os
+        import sys
+        import json
+        import pathlib
+        import tempfile
+
+        _current_action_path, = sys.argv[1:]
+        _current_action_path = os.path.realpath(os.path.normpath(_current_action_path))
+        try: assert bool(_current_action_path) and os.path.isdir(_current_action_path)
+        except AssertionError: raise ValueError(f"current_action_path: {_current_action_path}")
+
+        _inputs = json.loads("""
+        ${{ toJSON(inputs) }}
+        """.strip())
+        assert isinstance(_inputs, dict)
+
+        _key = _inputs.pop("key")
+        _system = _inputs.pop("system")
+        _architecture = _inputs.pop("architecture")
+        _mingw_threads = _inputs.pop("mingw_threads")
+        _compiler_flags = _inputs.pop("compiler_flags")
+        _wine_runtime_path = _inputs.pop("wine_runtime_path")
+        _build_directory_path = _inputs.pop("build_directory_path")
+        _source_directory_path = _inputs.pop("source_directory_path")
+
+        try: assert not _inputs
+        except AssertionError: raise ValueError(f"unexpected keys: {', '.join(_inputs.keys())}")
+
+        try:
+          assert isinstance(_key, str) and bool(_key)
+          assert _key == os.path.normpath(_key)
+          _key = pathlib.PosixPath(_key)
+          assert not _key.is_absolute()
+          assert "." not in _key.parts
+          assert ".." not in _key.parts
+        except AssertionError: raise ValueError(f"key: {_key}")
+
+        _image_name = "sandbox.local:{}".format(".".join(_key.parts))
+
+        _key = _key.as_posix()
+
+        _python_modules_path = os.path.realpath(os.path.normpath(os.path.join(_current_action_path, "../../..", "python/modules")))
+
+        try:
+          assert isinstance(_python_modules_path, str)
+          assert bool(_python_modules_path)
+          assert os.path.isdir(_python_modules_path)
+          sys.path.append(_python_modules_path)
+          from ci_helpers import log_group as _log_group_module
+          from ci_helpers import validators as _validators_module
+        except BaseException: raise RuntimeError(f"failed to import from {_python_modules_path}")
+
+        try: assert _system in {"linux-gnu", "w64-mingw32"}
+        except AssertionError: raise ValueError(f"system: {_system}")
+
+        try: assert _architecture in {"i686", "x86_64"}
+        except AssertionError: raise ValueError(f"architecture: {_architecture}")
+
+        try:
+          assert isinstance(_mingw_threads, str)
+          if "w64-mingw32" == _system: assert _mingw_threads in {"win32", "posix"}
+          else: assert not _mingw_threads
+        except AssertionError: raise ValueError(f"mingw_threads: {_mingw_threads}")
+
+        try:
+          _validators_module.validate_text_argument(_compiler_flags, require = False, require_inline = True, require_stripped = True)
+        except AssertionError: raise ValueError(f"compiler_flags: {_compiler_flags}")
+
+        try:
+          assert isinstance(_wine_runtime_path, str)
+          if "w64-mingw32" == _system: _validators_module.validate_text_argument(
+            _wine_runtime_path, require = True, require_inline = True, require_stripped = False
+          )
+          else: assert not _wine_runtime_path
+        except AssertionError: raise ValueError(f"wine_runtime_path: {_wine_runtime_path}")
+
+        try:
+          _validators_module.validate_text_argument(_build_directory_path, require = True, require_inline = True, require_stripped = True)
+          _build_directory_path = os.path.realpath(os.path.normpath(_build_directory_path))
+        except AssertionError: raise ValueError(f"build_directory_path: {_build_directory_path}")
+
+        try:
+          _validators_module.validate_text_argument(_source_directory_path, require = True, require_inline = True, require_stripped = True)
+          _source_directory_path = os.path.realpath(os.path.normpath(_source_directory_path))
+          os.path.isdir(_source_directory_path)
+        except AssertionError: raise ValueError(f"source_directory_path: {_source_directory_path}")
+
+        _cached_image_layers_path = "cache/podman/layers.tar"
+
+        _image_build_directory_path = os.path.realpath(os.path.normpath(os.path.join(_current_action_path, "../../..", "podman/build_contexts", _key)))
+        try: assert os.path.isdir(_image_build_directory_path)
+        except BaseException: raise ValueError(f"image_build_directory_path: {_image_build_directory_path}")
+
+        _compiler_prefix = f"{_architecture}-{_system}-"
+        _compiler_suffix = f"-{_mingw_threads}" if _mingw_threads else ""
+
+        _configure_options = [
+          "-DCMAKE_BUILD_TYPE=Release",
+          f"-DCMAKE_C_COMPILER={_compiler_prefix}gcc{_compiler_suffix}",
+          f"-DCMAKE_CXX_COMPILER={_compiler_prefix}g++{_compiler_suffix}"
+        ]
+
+        if _compiler_flags: _configure_options.extend((
+          f"-DCMAKE_C_FLAGS={_compiler_flags}",
+          f"-DCMAKE_CXX_FLAGS={_compiler_flags}"
+        ))
+
+        _image_upgrade_instructions = []
+
+        if "w64-mingw32" == _system:
+          _configure_options.extend((
+            "-DCMAKE_SYSTEM_NAME=Windows",
+            "-DCMAKE_CROSSCOMPILING_EMULATOR=wine"
+          ))
+          if "debian/buster" == _key: _configure_options.append(
+            f"-DCMAKE_RC_COMPILER={_architecture}-{_system}-windres"
+          )
+          elif "debian/bookworm" == _key: _image_upgrade_instructions.append(
+            f"RUN apt update --assume-yes && apt install --assume-yes g++-mingw-w64-{_architecture.replace('_', '-')}-{_mingw_threads}"
+          )
+
+        _collector = {
+          "image_name": _image_name,
+          "configure_options": _configure_options,
+          "wine_runtime_path": _wine_runtime_path,
+          "python_modules_path": _python_modules_path,
+          "build_directory_path": _build_directory_path,
+          "source_directory_path": _source_directory_path,
+          "cached_image_layers_path": _cached_image_layers_path,
+          "image_build_directory_path": _image_build_directory_path,
+          "image_upgrade_instructions": _image_upgrade_instructions
+        }
+
+        _result = tempfile.NamedTemporaryFile(mode = "w", suffix = ".config.json", delete = False)
+        with _result as _stream: json.dump(_collector, fp = _stream)
+        _result = _result.name
+
+        with _log_group_module.make(f"Config generated: {_result}"):
+          print(json.dumps(_collector, indent = 2), file = sys.stderr, flush = True)
+
+        with open(os.environ["GITHUB_OUTPUT"], "w+") as _stream:
+          print(f"result={_result}", file = _stream)
+          print(f"cached_image_layers_path={_cached_image_layers_path}", file = _stream)
+          print(f"image_build_directory_path={_image_build_directory_path}", file = _stream)
+
+    - name: creating build directory
+      shell: python3 {0} "${{ steps.get_config.outputs.result }}"
+      run: |
+        # creating build directory
+
+        import os
+        import sys
+        import json
+
+        _config, = sys.argv[1:]
+        assert isinstance(_config, str) and bool(_config)
+        with open(_config, "r") as _config: _config = json.load(_config)
+        assert isinstance(_config, dict) and bool(_config)
+
+        _build_directory_path = _config.pop("build_directory_path")
+
+        try: os.makedirs(_build_directory_path, exist_ok = False)
+        except FileExistsError:
+          assert os.path.isdir(_path)
+          try: assert not os.listdir(_build_directory_path)
+          except AssertionError: raise ValueError(f"build directory is not empty: {_build_directory_path}")
+
+    - id: get_image_cache_key
+      name: generating image cache key
+      shell: python3 {0} "${{ hashFiles(steps.get_config.outputs.image_build_directory_path) }}"
+      run: |
+        # generating image cache key
+
+        import os
+        import sys
+        import json
+
+        _result, = sys.argv[1:]
+        assert bool(_result)
+        assert _result.strip() == _result
+        assert _result.splitlines()[0] == _result
+
+        with open(os.environ["GITHUB_OUTPUT"], "w+") as _stream: print(f"result=podman/layers/{_result}", file = _stream)
+
+    - uses: actions/cache/restore@v3
+      with:
+        key: "${{ steps.get_image_cache_key.outputs.result }}/${{ github.run_id }}"
+        path: "${{ steps.get_config.outputs.cached_image_layers_path }}"
+        restore-keys: "${{ steps.get_image_cache_key.outputs.result }}/"
+
+    - name: generating image
+      shell: python3 {0} "${{ steps.get_config.outputs.result }}"
+      run: |
+        # generating image
+
+        import os
+        import sys
+        import json
+        import tempfile
+
+        _config, = sys.argv[1:]
+        assert isinstance(_config, str) and bool(_config)
+        with open(_config, "r") as _config: _config = json.load(_config)
+        assert isinstance(_config, dict) and bool(_config)
+
+        _image_name = _config.pop("image_name")
+        _build_directory_path = _config.pop("build_directory_path")
+        _cached_image_layers_path = _config.pop("cached_image_layers_path")
+        _image_build_directory_path = _config.pop("image_build_directory_path")
+        _image_upgrade_instructions = _config.pop("image_upgrade_instructions")
+
+        sys.path.append(_config.pop("python_modules_path"))
+        from ci_helpers import podman as _podman_module
+        from ci_helpers import log_group as _log_group_module
+
+        with _log_group_module.make(f"Loading cached image layers from file: {_cached_image_layers_path}"):
+          assert _podman_module.load_layers(_cached_image_layers_path)
+
+        with _log_group_module.make(f"Upgrading image: {_image_name}"):
+          _podman_module.build_image(_image_name, pull = True, context = _image_build_directory_path)
+          if _image_upgrade_instructions:
+            with tempfile.TemporaryDirectory(
+              dir = _build_directory_path,
+              suffix = ".image_upgrade.build_context"
+            ) as _image_build_directory_path:
+              with open(os.path.join(_image_build_directory_path, "Dockerfile"), "w") as _stream:
+                print(f"FROM {_image_name}", file = _stream)
+                for _line in _image_upgrade_instructions: print(_line, file = _stream)
+              _podman_module.build_image(_image_name, pull = False, context = _image_build_directory_path)
+
+    - name: running image
+      shell: python3 {0} "${{ steps.get_config.outputs.result }}"
+      run: |
+        # running image
+
+        import os
+        import sys
+        import json
+
+        _config, = sys.argv[1:]
+        assert isinstance(_config, str) and bool(_config)
+        with open(_config, "r") as _config: _config = json.load(_config)
+        assert isinstance(_config, dict) and bool(_config)
+
+        sys.path.append(_config.pop("python_modules_path"))
+        from ci_helpers import podman as _podman_module
+        from ci_helpers import log_group as _log_group_module
+
+        _image_name = _config.pop("image_name")
+        _configure_options = _config.pop("configure_options")
+
+        _build_directory_path = _config.pop("build_directory_path")
+        _source_directory_path = _config.pop("source_directory_path")
+
+        try: assert not os.listdir(_build_directory_path)
+        except AssertionError: raise ValueError(f"build directory is not empty: {_build_directory_path}")
+
+        _run_volumes = (
+          f"{_source_directory_path}:/mnt/src:ro",
+          f"{_build_directory_path}:/mnt/build:rw"
+        )
+
+        _current_command = ("cmake", "-S", "/mnt/src", "-B", "/mnt/build", *_configure_options)
+        with _log_group_module.make(f"Executing {' '.join(_current_command)}"):
+          _podman_module.run_image(_image_name, command = _current_command, volumes = _run_volumes)
+
+        _current_command = ("cmake", "--build", "/mnt/build", "--parallel")
+        with _log_group_module.make(f"Executing {' '.join(_current_command)}"):
+          _podman_module.run_image(_image_name, command = _current_command, volumes = _run_volumes)
+
+        _run_ctest_arguments = {
+          "image": _image_name,
+          "command": ("ctest", "--output-on-failure", "--parallel", "8", "--test-action", "test"),
+          "volumes": _run_volumes,
+          "environment": list(),
+          "working_directory": "/mnt/build"
+        }
+
+        _wine_runtime_path = _config.pop("wine_runtime_path")
+        if _wine_runtime_path: _run_ctest_arguments["environment"].append(("WINEPATH", _wine_runtime_path))
+
+        _current_command = _run_ctest_arguments["command"]
+        with _log_group_module.make(f"Executing {' '.join(_current_command)}"):
+          _podman_module.run_image(**_run_ctest_arguments)
