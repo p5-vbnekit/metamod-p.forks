@@ -43,13 +43,10 @@ target_compile_definitions("metamod" PRIVATE "$<$<CONFIG:Release>:__BUILD_FAST_M
 
 if(WIN32)
     target_sources("metamod" PRIVATE "osdep_linkent_win32.cpp" "osdep_detect_gamedll_win32.cpp")
-    if (NOT MSVC)
+    if((NOT MSVC) AND (CMAKE_SIZEOF_VOID_P EQUAL 4))
         target_link_options("metamod" PRIVATE "-Xlinker" "--script" "-Xlinker" "${CMAKE_CURRENT_SOURCE_DIR}/i386pe.merge")
     endif()
 elseif(UNIX)
-    target_sources("metamod" PRIVATE "osdep_linkent_linux.cpp" "osdep_detect_gamedll_linux.cpp")
-endif()
-
-if (NOT MSVC)
     target_link_libraries("metamod" PRIVATE "dl")
+    target_sources("metamod" PRIVATE "osdep_linkent_linux.cpp" "osdep_detect_gamedll_linux.cpp")
 endif()
