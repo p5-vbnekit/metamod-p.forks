@@ -141,6 +141,16 @@ mBOOL DLLINTERNAL install_gamedll(char *from, const char *to) {
 // meta_errno values:
 //  - ME_NOTFOUND	couldn't recognize game
 mBOOL DLLINTERNAL setup_gamedll(gamedll_t *gamedll) {
+	if (true) {
+		static bool flag_= false;
+		if (flag_) {
+			META_ERROR("Logic bug: setup_gamedll is already called!");
+			meta_errno = ME_NOTALLOWED;
+		    return(mFALSE);
+		}
+		flag_ = true;
+	}
+
 #ifdef __x86_64__
 	static char fixname_amd64[NAME_MAX]; // pointer is given outside function
 #endif
