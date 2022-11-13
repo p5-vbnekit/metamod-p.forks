@@ -33,7 +33,10 @@
  *    version.
  *
  */
+#include <cstddef>
 #include <cstring>
+
+#include <string>
 
 #include <fcntl.h>          // open, write
 
@@ -151,9 +154,6 @@ mBOOL DLLINTERNAL setup_gamedll(gamedll_t *gamedll) {
 		flag_ = true;
 	}
 
-#ifdef __x86_64__
-	static char fixname_amd64[NAME_MAX]; // pointer is given outside function
-#endif
 	static char override_desc_buf[NAME_MAX]; // pointer is given outside function
 	static char autodetect_desc_buf[NAME_MAX]; // pointer is given outside function
 	char install_path[NAME_MAX];
@@ -172,20 +172,31 @@ mBOOL DLLINTERNAL setup_gamedll(gamedll_t *gamedll) {
 #elif defined(linux)
 		knownfn=known->linux_so;
 	#ifdef __x86_64__
-		//AMD64: convert _i386.so to _amd64.so
-		if((cp = strstr(knownfn, "_i386.so")) ||
-		   (cp = strstr(knownfn, "_i486.so")) ||
-		   (cp = strstr(knownfn, "_i586.so")) ||
-		   (cp = strstr(knownfn, "_i686.so"))) {
-		   	//make sure that it's the ending that has "_iX86.so"
-		   	if(cp[strlen("_i386.so")] == 0) {
-				STRNCPY(fixname_amd64, known->linux_so,
-					MIN(((size_t)cp - (size_t)knownfn) + 1,
-					sizeof(fixname_amd64)));
-				strncat(fixname_amd64, "_amd64.so", sizeof(fixname_amd64));
-
-				knownfn=fixname_amd64;
-			}
+		// AMD64: convert _i386.so to _amd64.so
+		if (true) {
+			struct Helper_ {
+				inline static char const * routine(char const *src) {
+					if (! src) return src;
+					::std::string name_ = src;
+					::std::size_t const name_size_ = name_.size();
+					static ::std::size_t const pattern_size_ = sizeof("_i386.so") - 1;
+					if (! (name_size_ > pattern_size_)) return src;
+					if (true) {
+						char &char_ = name_.at(name_size_ - sizeof("86.so"));
+						if ('3' != char_) {
+							if (('3' < char_) && ('7' > char_)) char_ = '3';
+							else return src;
+						}
+					}
+					::std::size_t const offset_ = name_size_ - pattern_size_;
+					if (0 != ::std::strcmp("_i386.so", name_.data() + offset_)) return src;
+					name_.resize(offset_);
+					// pointer is given outside function
+					static ::std::string const fixed_ = name_ + "_amd64.so";
+					return fixed_.data();
+				}
+			};
+			knownfn = Helper_::routine(knownfn);
 		}
 	#endif /*__x86_64__*/
 #else
