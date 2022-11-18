@@ -37,41 +37,41 @@
 #ifndef TRACE_API_H
 #define TRACE_API_H
 
-#include <time.h>				// time()
+#include <time.h>           // time()
 
-#include <enginecallback.h>		// ALERT()
-#include <sdk_util.h>			// UTIL_VarArgs()
+#include <enginecallback.h> // ALERT()
+#include <sdk_util.h>       // UTIL_VarArgs()
 
 #include "api_info.h"
 
 #define API_TRACE(api_info_table, cvar_trace, api_str, pfnName, post, args) \
-	do { if((cvar_trace->value >= api_info_table.pfnName.loglevel || api_info_table.pfnName.trace) && (unlimit_trace->value || (last_trace_log != time(NULL)))) { \
-			ALERT(at_logged, "[%s] %s(%d): called: %s%s; %s\n", \
-					Plugin_info.logtag, api_str, \
-					api_info_table.pfnName.loglevel, \
-					api_info_table.pfnName.name, \
-					(post ? "_Post" : ""), \
-					UTIL_VarArgs args ); \
-			last_trace_log=time(NULL); \
-		} \
-	} while(0)
+    do { if((cvar_trace->value >= api_info_table.pfnName.loglevel || api_info_table.pfnName.trace) && (unlimit_trace->value || (last_trace_log != time(NULL)))) { \
+            ALERT(at_logged, "[%s] %s(%d): called: %s%s; %s\n", \
+                    Plugin_info.logtag, api_str, \
+                    api_info_table.pfnName.loglevel, \
+                    api_info_table.pfnName.name, \
+                    (post ? "_Post" : ""), \
+                    UTIL_VarArgs args ); \
+            last_trace_log=time(NULL); \
+        } \
+    } while(0)
 
 #define DLL_TRACE(pfnName, post, args) \
-	API_TRACE(dllapi_info, dllapi_trace, "dllapi", pfnName, post, args)
+    API_TRACE(dllapi_info, dllapi_trace, "dllapi", pfnName, post, args)
 
 #define NEWDLL_TRACE(pfnName, post, args) \
-	API_TRACE(newapi_info, newapi_trace, "newapi", pfnName, post, args)
+    API_TRACE(newapi_info, newapi_trace, "newapi", pfnName, post, args)
 
 #define ENGINE_TRACE(pfnName, post, args) \
-	API_TRACE(engine_info, engine_trace, "engine", pfnName, post, args)
+    API_TRACE(engine_info, engine_trace, "engine", pfnName, post, args)
 
 typedef enum {
-	TR_FAILURE = 0,
-	TR_SUCCESS,
-	TR_ALREADY
+    TR_FAILURE = 0,
+    TR_SUCCESS,
+    TR_ALREADY
 } TRACE_RESULT;
 
-#define MAX_REG_MESSAGES	256
+#define MAX_REG_MESSAGES 256
 
 extern time_t last_trace_log;
 
