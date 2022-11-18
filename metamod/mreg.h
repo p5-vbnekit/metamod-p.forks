@@ -64,7 +64,7 @@
 // Flags to indicate if given cvar or func is part of a loaded plugin.
 typedef enum {
 	RG_INVALID,
-	RG_VALID,
+	RG_VALID
 } REG_STATUS;
 
 // Pointer to function registered by AddServerCommand.

@@ -52,10 +52,11 @@ typedef enum {
 	CF_INT,
 	CF_BOOL,
 	CF_STR,
-	CF_PATH,
+	CF_PATH
 #if 0
+	,
 	CF_CVAR,
-	CF_CMD,
+	CF_CMD
 #endif
 } cf_type_t;
 
