@@ -60,7 +60,7 @@ typedef enum {
     PL_OPENED,      // dlopened and queried
     PL_FAILED,      // opened, but failed to attach or unattach
     PL_RUNNING,     // attached and running
-    PL_PAUSED,      // attached but paused
+    PL_PAUSED       // attached but paused
 } PLUG_STATUS;
 
 // Action to take for plugin at next opportunity.
@@ -71,14 +71,14 @@ typedef enum {
     PA_LOAD,        // load (dlopen, query) and try to attach
     PA_ATTACH,      // attach
     PA_UNLOAD,      // unload (detach, dlclose)
-    PA_RELOAD,      // unload and load again
+    PA_RELOAD       // unload and load again
 } PLUG_ACTION;
 
 // Flags to indicate from where the plugin was loaded.
 typedef enum {
     PS_INI = 0,     // was loaded from the plugins.ini
     PS_CMD,         // was loaded via a server command
-    PS_PLUGIN,      // was loaded by other plugin
+    PS_PLUGIN       // was loaded by other plugin
 } PLOAD_SOURCE;
 
 // Flags for how to word description of plugin loadtime.
@@ -86,25 +86,25 @@ typedef enum {
     SL_SIMPLE = 0,  // single word
     SL_SHOW,        // for "show" output, 5 chars
     SL_ALLOWED,     // when plugin is allowed to load/unload
-    SL_NOW,         // current situation
+    SL_NOW          // current situation
 } STR_LOADTIME;
 
 // Flags for how to format description of status.
 typedef enum {
     ST_SIMPLE = 0,  // single word
-    ST_SHOW,        // for "show" output, 4 chars
+    ST_SHOW         // for "show" output, 4 chars
 } STR_STATUS;
 
 // Flags for how to format description of action.
 typedef enum {
     SA_SIMPLE = 0,  // single word
-    SA_SHOW,        // for "show" output, 4 chars
+    SA_SHOW         // for "show" output, 4 chars
 } STR_ACTION;
 
 // Flags for how to format description of source.
 typedef enum {
     SO_SIMPLE = 0,  // two words
-    SO_SHOW,        // for "list" output, 3 chars
+    SO_SHOW         // for "list" output, 3 chars
 } STR_SOURCE;
 
 // api table list

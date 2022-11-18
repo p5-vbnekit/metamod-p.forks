@@ -68,7 +68,7 @@
 typedef enum {
 	TR_FAILURE = 0,
 	TR_SUCCESS,
-	TR_ALREADY,
+	TR_ALREADY
 } TRACE_RESULT;
 
 #define MAX_REG_MESSAGES	256

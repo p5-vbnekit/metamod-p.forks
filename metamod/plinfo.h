@@ -46,7 +46,7 @@ typedef enum {
 	PT_STARTUP,			// should only be loaded/unloaded at initial hlds execution
 	PT_CHANGELEVEL,		// can be loaded/unloaded between maps
 	PT_ANYTIME,			// can be loaded/unloaded at any time
-	PT_ANYPAUSE,		// can be loaded/unloaded at any time, and can be "paused" during a map
+	PT_ANYPAUSE		// can be loaded/unloaded at any time, and can be "paused" during a map
 } PLUG_LOADTIME;
 
 // Flags to indicate why the plugin is being unloaded.
@@ -61,7 +61,7 @@ typedef enum {
 	PNL_PLUGIN,			// requested by plugin function call
 	PNL_PLG_FORCED,			// forced by plugin function call
 //only used internally for 'meta reload'
-	PNL_RELOAD,			// forced unload by reload()
+	PNL_RELOAD			// forced unload by reload()
 } PL_UNLOAD_REASON;
 
 // Information plugin provides about itself.

@@ -43,7 +43,7 @@
 // Our own boolean type, for stricter type matching.
 typedef enum mBOOL {
 	mFALSE = 0,
-	mTRUE,
+	mTRUE
 } mBOOL;
 
 // Like C's errno, for our various functions; describes causes of failure
@@ -72,7 +72,7 @@ typedef enum {
 	ME_DLERROR,			// some other error encountered calling functions from dll
 	ME_IFVERSION,		// incompatible interface version
 	ME_UNLOAD_UNLOADER,	// tried to unload unloader
-	ME_UNLOAD_SELF,		// tried to unload self
+	ME_UNLOAD_SELF		// tried to unload self
 } META_ERRNO;
 extern META_ERRNO meta_errno DLLHIDDEN;
 

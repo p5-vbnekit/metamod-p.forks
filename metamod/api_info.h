@@ -50,7 +50,7 @@
 typedef enum enum_api_t {
 	e_api_engine = 0,
 	e_api_dllapi = 1,
-	e_api_newapi = 2,
+	e_api_newapi = 2
 } enum_api_t;
 
 // API caller function prototype

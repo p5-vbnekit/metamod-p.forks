@@ -52,7 +52,7 @@ typedef enum {
 	PC_INFO,		// show all info about the plugin
 	PC_CLEAR,		// remove a failed plugin from the list
 	PC_FORCE_UNLOAD,	// forcibly unload the plugin
-	PC_REQUIRE,		// require that this plugin is loaded/running
+	PC_REQUIRE		// require that this plugin is loaded/running
 } PLUG_CMD;
 
 void DLLINTERNAL meta_register_cmdcvar();
