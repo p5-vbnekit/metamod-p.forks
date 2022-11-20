@@ -29,7 +29,7 @@
  *
  */
 
-#include <stddef.h>			// offsetof
+#include <stddef.h> // offsetof
 #include <extdll.h>
 
 #include "ret_type.h"
@@ -38,400 +38,400 @@
 #include "api_hook.h"
 #include "mplugin.h"
 #include "metamod.h"
-#include "osdep.h"			//unlikely
+#include "osdep.h"  // unlikely
 
 // getting pointer with table index is faster than with if-else
 static const void ** api_tables[3] = {
-	(const void**)&Engine.funcs,
-	(const void**)&GameDLL.funcs.dllapi_table,
-	(const void**)&GameDLL.funcs.newapi_table
+    (const void**)&Engine.funcs,
+    (const void**)&GameDLL.funcs.dllapi_table,
+    (const void**)&GameDLL.funcs.newapi_table
 };
 
 static const void ** api_info_tables[3] = {
-	(const void**)&engine_info,
-	(const void**)&dllapi_info,
-	(const void**)&newapi_info
+    (const void**)&engine_info,
+    (const void**)&dllapi_info,
+    (const void**)&newapi_info
 };
 
 // Safety check for metamod-bot-plugin bugfix.
 //  engine_api->pfnRunPlayerMove calls dllapi-functions before it returns.
 //  This causes problems with bots running as metamod plugins, because
 //  metamod assumed that PublicMetaGlobals is free to be used.
-//  With call_count we can fix this by backuping up PublicMetaGlobals if 
+//  With call_count we can fix this by backuping up PublicMetaGlobals if
 //  it's already being used.
 static unsigned int call_count = 0;
 
 // get function pointer from api table by function pointer offset
 inline void * DLLINTERNAL get_api_function(const void * api_table, unsigned int func_offset) {
-	return(*(void**)((unsigned long)api_table + func_offset));
+    return(*(void**)((unsigned long)api_table + func_offset));
 }
 
 // get data pointer from api_info table by function offset
 inline const api_info_t * DLLINTERNAL get_api_info(enum_api_t api, unsigned int api_info_offset) {
-	return((const api_info_t *)((unsigned long)api_info_tables[api] + api_info_offset));
+    return((const api_info_t *)((unsigned long)api_info_tables[api] + api_info_offset));
 }
 
 // simplified 'void' version of main hook function
 void DLLINTERNAL main_hook_function_void(unsigned int api_info_offset, enum_api_t api, unsigned int func_offset, const void * packed_args) {
-	const api_info_t *api_info;
-	int i;
-	META_RES mres, status, prev_mres;
-	MPlugin *iplug;
-	void *pfn_routine;
-	const void *api_table;
-	meta_globals_t backup_meta_globals[1];
-	
-	//passing offset from api wrapper function makes code faster/smaller
-	api_info = get_api_info(api, api_info_offset);
-	
-	//Fix bug with metamod-bot-plugins.
-	if(unlikely(call_count++>0)) {
-		//Backup PublicMetaGlobals.
-		backup_meta_globals[0] = PublicMetaGlobals;
-	}
-	
-	//Setup
-	mres=MRES_UNSET;
-	status=MRES_UNSET;
-	prev_mres=MRES_UNSET;
-	pfn_routine=NULL;
+    const api_info_t *api_info;
+    int i;
+    META_RES mres, status, prev_mres;
+    MPlugin *iplug;
+    void *pfn_routine;
+    const void *api_table;
+    meta_globals_t backup_meta_globals[1];
 
-	int const loglevel = api_info->loglevel;
+    //passing offset from api wrapper function makes code faster/smaller
+    api_info = get_api_info(api, api_info_offset);
+
+    //Fix bug with metamod-bot-plugins.
+    if(unlikely(call_count++>0)) {
+        //Backup PublicMetaGlobals.
+        backup_meta_globals[0] = PublicMetaGlobals;
+    }
+
+    //Setup
+    mres=MRES_UNSET;
+    status=MRES_UNSET;
+    prev_mres=MRES_UNSET;
+    pfn_routine=NULL;
+
+    int const loglevel = api_info->loglevel;
 #ifdef __BUILD_FAST_METAMOD__
-	(void)loglevel; // used only in META_DEBUG [-Wunused-but-set-variable]
+    (void)loglevel; // used only in META_DEBUG [-Wunused-but-set-variable]
 #endif
-	
-	//Pre plugin functions
-	prev_mres=MRES_UNSET;
-	for(i=0; likely(i < Plugins->endlist); i++) {
-		iplug=&Plugins->plist[i];
-		
-		if(unlikely(iplug->status != PL_RUNNING))
-			continue;
-		
-		api_table = iplug->get_api_table(api);
-		if(likely(!api_table)) {
-			//plugin doesn't provide this api table
-			continue;
-		}
-		
-		pfn_routine=get_api_function(api_table, func_offset);
-		if(likely(!pfn_routine)) {
-			//plugin doesn't provide this function
-			continue;
-		}
-		
-		// initialize PublicMetaGlobals
-		PublicMetaGlobals.mres = MRES_UNSET;
-		PublicMetaGlobals.prev_mres = prev_mres;
-		PublicMetaGlobals.status = status;
-		
-		// call plugin
-		META_DEBUG(loglevel, ("Calling %s:%s()", iplug->file, api_info->name));
-		api_info->api_caller(pfn_routine, packed_args);
-		API_UNPAUSE_TSC_TRACKING();
-		
-		// plugin's result code
-		mres=PublicMetaGlobals.mres;
-		if(unlikely(mres > status))
-			status = mres;
-		
-		// save this for successive plugins to see
-		prev_mres = mres;
-		
-		if(unlikely(mres==MRES_UNSET))
-			META_WARNING("Plugin didn't set meta_result: %s:%s()", iplug->file, api_info->name);
-	}
-	
-	call_count--;
-	
-	//Api call
-	if(likely(status!=MRES_SUPERCEDE)) {
-		//get api table
-		api_table = *api_tables[api];
-		
-		if(likely(api_table)) {
-			pfn_routine = get_api_function(api_table, func_offset);
-			if(likely(pfn_routine)) {
-				META_DEBUG(loglevel, ("Calling %s:%s()", (api==e_api_engine)?"engine":GameDLL.file, api_info->name));
-				api_info->api_caller(pfn_routine, packed_args);
-				API_UNPAUSE_TSC_TRACKING();
-			} else {
-				// don't complain for NULL routines in NEW_DLL_FUNCTIONS
-				if(unlikely(api != e_api_newapi))
-					META_WARNING("Couldn't find api call: %s:%s", (api==e_api_engine)?"engine":GameDLL.file, api_info->name);
-				status=MRES_UNSET;
-			}
-		} else {
-			// don't complain for NULL NEW_DLL_FUNCTIONS-table
-			if(unlikely(api != e_api_newapi))
-				META_DEBUG(loglevel, ("No api table defined for api call: %s:%s", (api==e_api_engine)?"engine":GameDLL.file, api_info->name));
-			status=MRES_UNSET;
-		}
-	} else
-		META_DEBUG(loglevel, ("Skipped (supercede) %s:%s()", (api==e_api_engine)?"engine":GameDLL.file, api_info->name));
-	
-	call_count++;
-	
-	//Post plugin functions
-	prev_mres=MRES_UNSET;
-	for(i=0; likely(i < Plugins->endlist); i++) {
-		iplug=&Plugins->plist[i];
-		
-		if(unlikely(iplug->status != PL_RUNNING))
-			continue;
-		
-		api_table = iplug->get_api_post_table(api);
-		if(likely(!api_table)) {
-			//plugin doesn't provide this api table
-			continue;
-		}
-		
-		pfn_routine=get_api_function(api_table, func_offset);
-		if(likely(!pfn_routine)) {
-			//plugin doesn't provide this function
-			continue;
-		}
-		
-		// initialize PublicMetaGlobals
-		PublicMetaGlobals.mres = MRES_UNSET;
-		PublicMetaGlobals.prev_mres = prev_mres;
-		PublicMetaGlobals.status = status;
-		
-		// call plugin
-		META_DEBUG(loglevel, ("Calling %s:%s_Post()", iplug->file, api_info->name));
-		api_info->api_caller(pfn_routine, packed_args);
-		API_UNPAUSE_TSC_TRACKING();
-		
-		// plugin's result code
-		mres=PublicMetaGlobals.mres;
-		if(unlikely(mres > status))
-			status = mres;
-		
-		// save this for successive plugins to see
-		prev_mres = mres;
-		
-		if(unlikely(mres==MRES_UNSET))
-			META_WARNING("Plugin didn't set meta_result: %s:%s_Post()", iplug->file, api_info->name);
-		else if(unlikely(mres==MRES_SUPERCEDE))
-			META_WARNING("MRES_SUPERCEDE not valid in Post functions: %s:%s_Post()", iplug->file, api_info->name);
-	}
 
-	if(unlikely(--call_count>0)) {
-		//Restore backup
-		PublicMetaGlobals = backup_meta_globals[0];
-	}
+    //Pre plugin functions
+    prev_mres=MRES_UNSET;
+    for(i=0; likely(i < Plugins->endlist); i++) {
+        iplug=&Plugins->plist[i];
+
+        if(unlikely(iplug->status != PL_RUNNING))
+            continue;
+
+        api_table = iplug->get_api_table(api);
+        if(likely(!api_table)) {
+            //plugin doesn't provide this api table
+            continue;
+        }
+
+        pfn_routine=get_api_function(api_table, func_offset);
+        if(likely(!pfn_routine)) {
+            //plugin doesn't provide this function
+            continue;
+        }
+
+        // initialize PublicMetaGlobals
+        PublicMetaGlobals.mres = MRES_UNSET;
+        PublicMetaGlobals.prev_mres = prev_mres;
+        PublicMetaGlobals.status = status;
+
+        // call plugin
+        META_DEBUG(loglevel, ("Calling %s:%s()", iplug->file, api_info->name));
+        api_info->api_caller(pfn_routine, packed_args);
+        API_UNPAUSE_TSC_TRACKING();
+
+        // plugin's result code
+        mres=PublicMetaGlobals.mres;
+        if(unlikely(mres > status))
+            status = mres;
+
+        // save this for successive plugins to see
+        prev_mres = mres;
+
+        if(unlikely(mres==MRES_UNSET))
+            META_WARNING("Plugin didn't set meta_result: %s:%s()", iplug->file, api_info->name);
+    }
+
+    call_count--;
+
+    //Api call
+    if(likely(status!=MRES_SUPERCEDE)) {
+        //get api table
+        api_table = *api_tables[api];
+
+        if(likely(api_table)) {
+            pfn_routine = get_api_function(api_table, func_offset);
+            if(likely(pfn_routine)) {
+                META_DEBUG(loglevel, ("Calling %s:%s()", (api==e_api_engine)?"engine":GameDLL.file, api_info->name));
+                api_info->api_caller(pfn_routine, packed_args);
+                API_UNPAUSE_TSC_TRACKING();
+            } else {
+                // don't complain for NULL routines in NEW_DLL_FUNCTIONS
+                if(unlikely(api != e_api_newapi))
+                    META_WARNING("Couldn't find api call: %s:%s", (api==e_api_engine)?"engine":GameDLL.file, api_info->name);
+                status=MRES_UNSET;
+            }
+        } else {
+            // don't complain for NULL NEW_DLL_FUNCTIONS-table
+            if(unlikely(api != e_api_newapi))
+                META_DEBUG(loglevel, ("No api table defined for api call: %s:%s", (api==e_api_engine)?"engine":GameDLL.file, api_info->name));
+            status=MRES_UNSET;
+        }
+    } else
+        META_DEBUG(loglevel, ("Skipped (supercede) %s:%s()", (api==e_api_engine)?"engine":GameDLL.file, api_info->name));
+
+    call_count++;
+
+    //Post plugin functions
+    prev_mres=MRES_UNSET;
+    for(i=0; likely(i < Plugins->endlist); i++) {
+        iplug=&Plugins->plist[i];
+
+        if(unlikely(iplug->status != PL_RUNNING))
+            continue;
+
+        api_table = iplug->get_api_post_table(api);
+        if(likely(!api_table)) {
+            //plugin doesn't provide this api table
+            continue;
+        }
+
+        pfn_routine=get_api_function(api_table, func_offset);
+        if(likely(!pfn_routine)) {
+            //plugin doesn't provide this function
+            continue;
+        }
+
+        // initialize PublicMetaGlobals
+        PublicMetaGlobals.mres = MRES_UNSET;
+        PublicMetaGlobals.prev_mres = prev_mres;
+        PublicMetaGlobals.status = status;
+
+        // call plugin
+        META_DEBUG(loglevel, ("Calling %s:%s_Post()", iplug->file, api_info->name));
+        api_info->api_caller(pfn_routine, packed_args);
+        API_UNPAUSE_TSC_TRACKING();
+
+        // plugin's result code
+        mres=PublicMetaGlobals.mres;
+        if(unlikely(mres > status))
+            status = mres;
+
+        // save this for successive plugins to see
+        prev_mres = mres;
+
+        if(unlikely(mres==MRES_UNSET))
+            META_WARNING("Plugin didn't set meta_result: %s:%s_Post()", iplug->file, api_info->name);
+        else if(unlikely(mres==MRES_SUPERCEDE))
+            META_WARNING("MRES_SUPERCEDE not valid in Post functions: %s:%s_Post()", iplug->file, api_info->name);
+    }
+
+    if(unlikely(--call_count>0)) {
+        //Restore backup
+        PublicMetaGlobals = backup_meta_globals[0];
+    }
 }
 
 // full return typed version of main hook function
 void * DLLINTERNAL main_hook_function(const class_ret_t ret_init, unsigned int api_info_offset, enum_api_t api, unsigned int func_offset, const void * packed_args) {
-	const api_info_t *api_info;
-	int i;
-	META_RES mres, status, prev_mres;
-	MPlugin *iplug;
-	void *pfn_routine;
-	const void *api_table;
-	meta_globals_t backup_meta_globals[1];
-	
-	//passing offset from api wrapper function makes code faster/smaller
-	api_info = get_api_info(api, api_info_offset);
-	
-	//Fix bug with metamod-bot-plugins.
-	if(unlikely(call_count++>0)) {
-		//Backup PublicMetaGlobals.
-		backup_meta_globals[0] = PublicMetaGlobals;
-	}
-	
-	//Return class setup
-	class_ret_t dllret=ret_init;
-	class_ret_t override_ret=ret_init;
-	class_ret_t pub_override_ret=ret_init;
-	class_ret_t orig_ret=ret_init;
-	class_ret_t pub_orig_ret=ret_init;
-	
-	//Setup
-	mres=MRES_UNSET;
-	status=MRES_UNSET;
-	prev_mres=MRES_UNSET;
-	pfn_routine=NULL;
+    const api_info_t *api_info;
+    int i;
+    META_RES mres, status, prev_mres;
+    MPlugin *iplug;
+    void *pfn_routine;
+    const void *api_table;
+    meta_globals_t backup_meta_globals[1];
 
-	int const loglevel = api_info->loglevel;
+    //passing offset from api wrapper function makes code faster/smaller
+    api_info = get_api_info(api, api_info_offset);
+
+    //Fix bug with metamod-bot-plugins.
+    if(unlikely(call_count++>0)) {
+        //Backup PublicMetaGlobals.
+        backup_meta_globals[0] = PublicMetaGlobals;
+    }
+
+    //Return class setup
+    class_ret_t dllret=ret_init;
+    class_ret_t override_ret=ret_init;
+    class_ret_t pub_override_ret=ret_init;
+    class_ret_t orig_ret=ret_init;
+    class_ret_t pub_orig_ret=ret_init;
+
+    //Setup
+    mres=MRES_UNSET;
+    status=MRES_UNSET;
+    prev_mres=MRES_UNSET;
+    pfn_routine=NULL;
+
+    int const loglevel = api_info->loglevel;
 #ifdef __BUILD_FAST_METAMOD__
-	(void)loglevel; // used only in META_DEBUG [-Wunused-but-set-variable]
+    (void)loglevel; // used only in META_DEBUG [-Wunused-but-set-variable]
 #endif
-	
-	//Pre plugin functions
-	prev_mres=MRES_UNSET;
-	for(i=0; likely(i < Plugins->endlist); i++) {
-		iplug=&Plugins->plist[i];
-		
-		if(unlikely(iplug->status != PL_RUNNING))
-			continue;
-		
-		api_table = iplug->get_api_table(api);
-		if(likely(!api_table)) {
-			//plugin doesn't provide this api table
-			continue;
-		}
-		
-		pfn_routine=get_api_function(api_table, func_offset);
-		if(likely(!pfn_routine)) {
-			//plugin doesn't provide this function
-			continue;
-		}
-		
-		// initialize PublicMetaGlobals
-		PublicMetaGlobals.mres = MRES_UNSET;
-		PublicMetaGlobals.prev_mres = prev_mres;
-		PublicMetaGlobals.status = status;
-		pub_orig_ret = orig_ret;
-		PublicMetaGlobals.orig_ret = pub_orig_ret.getptr();
-		if(unlikely(status==MRES_SUPERCEDE)) {
-			pub_override_ret = override_ret;
-			PublicMetaGlobals.override_ret = pub_override_ret.getptr();
-		}
-		
-		// call plugin
-		META_DEBUG(loglevel, ("Calling %s:%s()", iplug->file, api_info->name));
-		dllret = class_ret_t(api_info->api_caller(pfn_routine, packed_args));
-		API_UNPAUSE_TSC_TRACKING();
-		
-		// plugin's result code
-		mres=PublicMetaGlobals.mres;
-		if(unlikely(mres > status))
-			status = mres;
-		
-		// save this for successive plugins to see
-		prev_mres = mres;
-		
-		if(unlikely(mres==MRES_SUPERCEDE)) {
-			pub_override_ret = dllret;
-			override_ret = dllret;
-		} 
-		else if(unlikely(mres==MRES_UNSET)) {
-			META_WARNING("Plugin didn't set meta_result: %s:%s()", iplug->file, api_info->name);
-		}
-	}
-	
-	call_count--;
-	
-	//Api call
-	if(likely(status!=MRES_SUPERCEDE)) {
-		//get api table
-		api_table = *api_tables[api];
-		
-		if(likely(api_table)) {
-			pfn_routine = get_api_function(api_table, func_offset);
-			if(likely(pfn_routine)) {
-				META_DEBUG(loglevel, ("Calling %s:%s()", (api==e_api_engine)?"engine":GameDLL.file, api_info->name));
-				dllret = class_ret_t(api_info->api_caller(pfn_routine, packed_args));
-				API_UNPAUSE_TSC_TRACKING();
-				orig_ret = dllret;
-			} else {
-				// don't complain for NULL routines in NEW_DLL_FUNCTIONS
-				if(unlikely(api != e_api_newapi))
-					META_WARNING("Couldn't find api call: %s:%s", (api==e_api_engine)?"engine":GameDLL.file, api_info->name);
-				status=MRES_UNSET;
-			}
-		} else {
-			// don't complain for NULL NEW_DLL_FUNCTIONS-table
-			if(unlikely(api != e_api_newapi))
-				META_DEBUG(loglevel, ("No api table defined for api call: %s:%s", (api==e_api_engine)?"engine":GameDLL.file, api_info->name));
-			status=MRES_UNSET;
-		}
-	} else {
-		META_DEBUG(loglevel, ("Skipped (supercede) %s:%s()", (api==e_api_engine)?"engine":GameDLL.file, api_info->name));
-		orig_ret = override_ret;
-		pub_orig_ret = override_ret;
-		PublicMetaGlobals.orig_ret = pub_orig_ret.getptr();
-	}
-	
-	call_count++;
-	
-	//Post plugin functions
-	prev_mres=MRES_UNSET;
-	for(i=0; likely(i < Plugins->endlist); i++) {
-		iplug=&Plugins->plist[i];
-		
-		if(unlikely(iplug->status != PL_RUNNING))
-			continue;
-		
-		api_table = iplug->get_api_post_table(api);
-		if(likely(!api_table)) {
-			//plugin doesn't provide this api table
-			continue;
-		}
-		
-		pfn_routine=get_api_function(api_table, func_offset);
-		if(likely(!pfn_routine)) {
-			//plugin doesn't provide this function
-			continue;
-		}
-		
-		// initialize PublicMetaGlobals
-		PublicMetaGlobals.mres = MRES_UNSET;
-		PublicMetaGlobals.prev_mres = prev_mres;
-		PublicMetaGlobals.status = status;
-		pub_orig_ret = orig_ret;
-		PublicMetaGlobals.orig_ret = pub_orig_ret.getptr();
-		if(unlikely(status==MRES_OVERRIDE)) {
-			pub_override_ret = override_ret;
-			PublicMetaGlobals.override_ret = pub_override_ret.getptr();
-		}
-		
-		// call plugin
-		META_DEBUG(loglevel, ("Calling %s:%s_Post()", iplug->file, api_info->name));
-		dllret = class_ret_t(api_info->api_caller(pfn_routine, packed_args));
-		API_UNPAUSE_TSC_TRACKING();
-		
-		// plugin's result code
-		mres=PublicMetaGlobals.mres;
-		if(unlikely(mres > status))
-			status = mres;
-		
-		// save this for successive plugins to see
-		prev_mres = mres;
-		
-		if(unlikely(mres==MRES_OVERRIDE)) {
-			pub_override_ret = dllret;
-			override_ret = dllret;
-		}
-		else if(unlikely(mres==MRES_UNSET)) {
-			META_WARNING("Plugin didn't set meta_result: %s:%s_Post()", iplug->file, api_info->name);
-		}
-		else if(unlikely(mres==MRES_SUPERCEDE)) {
-			META_WARNING("MRES_SUPERCEDE not valid in Post functions: %s:%s_Post()", iplug->file, api_info->name);
-		}
-	}
-	
-	if(unlikely(--call_count>0)) {
-		//Restore backup
-		PublicMetaGlobals = backup_meta_globals[0];
-	}
-	
-	//return value is passed through ret_init!
-	if(likely(status!=MRES_OVERRIDE)) {
-		return(*(void**)orig_ret.getptr());
-	} else {
-		META_DEBUG(loglevel, ("Returning (override) %s()", api_info->name));
-		return(*(void**)override_ret.getptr());
-	}
+
+    //Pre plugin functions
+    prev_mres=MRES_UNSET;
+    for(i=0; likely(i < Plugins->endlist); i++) {
+        iplug=&Plugins->plist[i];
+
+        if(unlikely(iplug->status != PL_RUNNING))
+            continue;
+
+        api_table = iplug->get_api_table(api);
+        if(likely(!api_table)) {
+            //plugin doesn't provide this api table
+            continue;
+        }
+
+        pfn_routine=get_api_function(api_table, func_offset);
+        if(likely(!pfn_routine)) {
+            //plugin doesn't provide this function
+            continue;
+        }
+
+        // initialize PublicMetaGlobals
+        PublicMetaGlobals.mres = MRES_UNSET;
+        PublicMetaGlobals.prev_mres = prev_mres;
+        PublicMetaGlobals.status = status;
+        pub_orig_ret = orig_ret;
+        PublicMetaGlobals.orig_ret = pub_orig_ret.getptr();
+        if(unlikely(status==MRES_SUPERCEDE)) {
+            pub_override_ret = override_ret;
+            PublicMetaGlobals.override_ret = pub_override_ret.getptr();
+        }
+
+        // call plugin
+        META_DEBUG(loglevel, ("Calling %s:%s()", iplug->file, api_info->name));
+        dllret = class_ret_t(api_info->api_caller(pfn_routine, packed_args));
+        API_UNPAUSE_TSC_TRACKING();
+
+        // plugin's result code
+        mres=PublicMetaGlobals.mres;
+        if(unlikely(mres > status))
+            status = mres;
+
+        // save this for successive plugins to see
+        prev_mres = mres;
+
+        if(unlikely(mres==MRES_SUPERCEDE)) {
+            pub_override_ret = dllret;
+            override_ret = dllret;
+        }
+        else if(unlikely(mres==MRES_UNSET)) {
+            META_WARNING("Plugin didn't set meta_result: %s:%s()", iplug->file, api_info->name);
+        }
+    }
+
+    call_count--;
+
+    //Api call
+    if(likely(status!=MRES_SUPERCEDE)) {
+        //get api table
+        api_table = *api_tables[api];
+
+        if(likely(api_table)) {
+            pfn_routine = get_api_function(api_table, func_offset);
+            if(likely(pfn_routine)) {
+                META_DEBUG(loglevel, ("Calling %s:%s()", (api==e_api_engine)?"engine":GameDLL.file, api_info->name));
+                dllret = class_ret_t(api_info->api_caller(pfn_routine, packed_args));
+                API_UNPAUSE_TSC_TRACKING();
+                orig_ret = dllret;
+            } else {
+                // don't complain for NULL routines in NEW_DLL_FUNCTIONS
+                if(unlikely(api != e_api_newapi))
+                    META_WARNING("Couldn't find api call: %s:%s", (api==e_api_engine)?"engine":GameDLL.file, api_info->name);
+                status=MRES_UNSET;
+            }
+        } else {
+            // don't complain for NULL NEW_DLL_FUNCTIONS-table
+            if(unlikely(api != e_api_newapi))
+                META_DEBUG(loglevel, ("No api table defined for api call: %s:%s", (api==e_api_engine)?"engine":GameDLL.file, api_info->name));
+            status=MRES_UNSET;
+        }
+    } else {
+        META_DEBUG(loglevel, ("Skipped (supercede) %s:%s()", (api==e_api_engine)?"engine":GameDLL.file, api_info->name));
+        orig_ret = override_ret;
+        pub_orig_ret = override_ret;
+        PublicMetaGlobals.orig_ret = pub_orig_ret.getptr();
+    }
+
+    call_count++;
+
+    //Post plugin functions
+    prev_mres=MRES_UNSET;
+    for(i=0; likely(i < Plugins->endlist); i++) {
+        iplug=&Plugins->plist[i];
+
+        if(unlikely(iplug->status != PL_RUNNING))
+            continue;
+
+        api_table = iplug->get_api_post_table(api);
+        if(likely(!api_table)) {
+            //plugin doesn't provide this api table
+            continue;
+        }
+
+        pfn_routine=get_api_function(api_table, func_offset);
+        if(likely(!pfn_routine)) {
+            //plugin doesn't provide this function
+            continue;
+        }
+
+        // initialize PublicMetaGlobals
+        PublicMetaGlobals.mres = MRES_UNSET;
+        PublicMetaGlobals.prev_mres = prev_mres;
+        PublicMetaGlobals.status = status;
+        pub_orig_ret = orig_ret;
+        PublicMetaGlobals.orig_ret = pub_orig_ret.getptr();
+        if(unlikely(status==MRES_OVERRIDE)) {
+            pub_override_ret = override_ret;
+            PublicMetaGlobals.override_ret = pub_override_ret.getptr();
+        }
+
+        // call plugin
+        META_DEBUG(loglevel, ("Calling %s:%s_Post()", iplug->file, api_info->name));
+        dllret = class_ret_t(api_info->api_caller(pfn_routine, packed_args));
+        API_UNPAUSE_TSC_TRACKING();
+
+        // plugin's result code
+        mres=PublicMetaGlobals.mres;
+        if(unlikely(mres > status))
+            status = mres;
+
+        // save this for successive plugins to see
+        prev_mres = mres;
+
+        if(unlikely(mres==MRES_OVERRIDE)) {
+            pub_override_ret = dllret;
+            override_ret = dllret;
+        }
+        else if(unlikely(mres==MRES_UNSET)) {
+            META_WARNING("Plugin didn't set meta_result: %s:%s_Post()", iplug->file, api_info->name);
+        }
+        else if(unlikely(mres==MRES_SUPERCEDE)) {
+            META_WARNING("MRES_SUPERCEDE not valid in Post functions: %s:%s_Post()", iplug->file, api_info->name);
+        }
+    }
+
+    if(unlikely(--call_count>0)) {
+        //Restore backup
+        PublicMetaGlobals = backup_meta_globals[0];
+    }
+
+    //return value is passed through ret_init!
+    if(likely(status!=MRES_OVERRIDE)) {
+        return(*(void**)orig_ret.getptr());
+    } else {
+        META_DEBUG(loglevel, ("Returning (override) %s()", api_info->name));
+        return(*(void**)override_ret.getptr());
+    }
 }
 
 //
 // Macros for creating api caller functions
 //
 #define BEGIN_API_CALLER_FUNC(ret_type, args_type_code) \
-	void * DLLINTERNAL _COMBINE4(api_caller_, ret_type, _args_, args_type_code)(const void * func, const void * packed_args) { \
-		_COMBINE2(pack_args_type_, args_type_code) * p ATTRIBUTE(unused)= (_COMBINE2(pack_args_type_, args_type_code) *)packed_args;
+    void * DLLINTERNAL _COMBINE4(api_caller_, ret_type, _args_, args_type_code)(const void * func, const void * packed_args) { \
+        _COMBINE2(pack_args_type_, args_type_code) * p ATTRIBUTE(unused)= (_COMBINE2(pack_args_type_, args_type_code) *)packed_args;
 #define END_API_CALLER_FUNC(ret_t, args_t, args) \
-		API_PAUSE_TSC_TRACKING(); \
-		return(*(void **)class_ret_t((*(( ret_t (*) args_t )func)) args).getptr()); \
-	}
+        API_PAUSE_TSC_TRACKING(); \
+        return(*(void **)class_ret_t((*(( ret_t (*) args_t )func)) args).getptr()); \
+    }
 #define END_API_CALLER_FUNC_void(args_t, args) \
-		API_PAUSE_TSC_TRACKING(); \
-		return((*(( void* (*) args_t )func)) args); \
-	}
+        API_PAUSE_TSC_TRACKING(); \
+        return((*(( void* (*) args_t )func)) args); \
+    }
 
 //
 // API function callers.
