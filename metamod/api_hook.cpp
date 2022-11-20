@@ -78,7 +78,6 @@ void DLLINTERNAL main_hook_function_void(unsigned int api_info_offset, enum_api_
 	META_RES mres, status, prev_mres;
 	MPlugin *iplug;
 	void *pfn_routine;
-	int loglevel;
 	const void *api_table;
 	meta_globals_t backup_meta_globals[1];
 	
@@ -92,11 +91,15 @@ void DLLINTERNAL main_hook_function_void(unsigned int api_info_offset, enum_api_
 	}
 	
 	//Setup
-	loglevel=api_info->loglevel;
 	mres=MRES_UNSET;
 	status=MRES_UNSET;
 	prev_mres=MRES_UNSET;
 	pfn_routine=NULL;
+
+	int const loglevel = api_info->loglevel;
+#ifdef __BUILD_FAST_METAMOD__
+	(void)loglevel; // used only in META_DEBUG [-Wunused-but-set-variable]
+#endif
 	
 	//Pre plugin functions
 	prev_mres=MRES_UNSET;
@@ -227,7 +230,6 @@ void * DLLINTERNAL main_hook_function(const class_ret_t ret_init, unsigned int a
 	META_RES mres, status, prev_mres;
 	MPlugin *iplug;
 	void *pfn_routine;
-	int loglevel;
 	const void *api_table;
 	meta_globals_t backup_meta_globals[1];
 	
@@ -248,11 +250,15 @@ void * DLLINTERNAL main_hook_function(const class_ret_t ret_init, unsigned int a
 	class_ret_t pub_orig_ret=ret_init;
 	
 	//Setup
-	loglevel=api_info->loglevel;
 	mres=MRES_UNSET;
 	status=MRES_UNSET;
 	prev_mres=MRES_UNSET;
 	pfn_routine=NULL;
+
+	int const loglevel = api_info->loglevel;
+#ifdef __BUILD_FAST_METAMOD__
+	(void)loglevel; // used only in META_DEBUG [-Wunused-but-set-variable]
+#endif
 	
 	//Pre plugin functions
 	prev_mres=MRES_UNSET;
