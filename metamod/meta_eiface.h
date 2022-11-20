@@ -473,7 +473,7 @@ struct HL_enginefuncs_t : public meta_enginefuncs_t {
 };
 
 
-inline HL_enginefuncs_t :: HL_enginefuncs_t() : meta_enginefuncs_t() { };
+inline HL_enginefuncs_t :: HL_enginefuncs_t() : meta_enginefuncs_t() { }
 
 
 #endif /* META_EIFACE_H */
