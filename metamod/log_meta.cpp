@@ -182,6 +182,8 @@ public:
 	const char *prefix;
 	char buf[MAX_LOGMSG_LEN];
 	BufferedMessage *next;
+
+	inline BufferedMessage(): service(mlsCONS), atype(at_console), prefix(0), next(0) {}
 };
 
 static BufferedMessage *messageQueueStart = NULL;

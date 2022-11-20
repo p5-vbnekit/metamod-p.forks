@@ -198,6 +198,15 @@ class MPlugin : public class_metamod_new {
         inline const char * DLLINTERNAL str_unloadable(STR_LOADTIME fmt) {
             return(info?str_loadtime(info->unloadable, fmt):" -");
         };
+
+        inline MPlugin():
+            status(PL_EMPTY), tables(), post_tables(),
+            index(0), pfspecific(0), action(PA_NULL), source(PS_INI),
+            source_plugin_index(0), unloader_index(0), is_unloader(mFALSE),
+            handle(0), info(0), time_loaded(0), file(0),
+            gamedll_funcs(), mutil_funcs()
+        {}
+
     private:
         mBOOL DLLINTERNAL query(void);
         mBOOL DLLINTERNAL attach(PLUG_LOADTIME now);

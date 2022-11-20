@@ -155,6 +155,7 @@ class MRegMsg : public class_metamod_new {
         const char *name;   // name, assumed constant string in gamedll
         int msgid;          // msgid, assigned by engine
         int size;           // size, if given by gamedll
+        inline MRegMsg(): index(0), name(0), msgid(0), size(0) {}
 };
 
 // A list of registered user msgs.

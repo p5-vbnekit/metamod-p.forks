@@ -44,11 +44,11 @@
 #include "support_meta.h"	// strmatch
 #include "osdep.h"			// strtok,
 
-MConfig::MConfig(void)
-	: list(NULL), filename(NULL), debuglevel(0), gamedll(NULL),
-		plugins_file(NULL), exec_cfg(NULL)
-{
-}
+MConfig::MConfig(void):
+	list(NULL), filename(NULL), debuglevel(0), gamedll(NULL),
+	plugins_file(NULL), exec_cfg(NULL),
+	autodetect(1), clientmeta(1)
+{}
 
 // Initialize default values from the stored options struct.  Has to happen
 // _after_ constructor, so that all the fields are allocated (d'oh).
