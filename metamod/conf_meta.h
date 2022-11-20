@@ -60,7 +60,7 @@ typedef enum {
 #endif
 } cf_type_t;
 
-//typedef mBOOL (*SETOPT_FN) (char *key, char *value);
+// typedef mBOOL (*SETOPT_FN) (char *key, char *value);
 
 typedef struct option_s {
     char *name;     // option name
@@ -90,7 +90,7 @@ class MConfig : public class_metamod_new {
         char *plugins_file; // ie metamod.ini, plugins.ini
         char *exec_cfg;     // ie metaexec.cfg, exec.cfg
         int autodetect;     // autodetection of gamedll (Metamod-All-Support patch)
-        int clientmeta;         // control 'meta' client-command
+        int clientmeta;     // control 'meta' client-command
         // functions
         void DLLINTERNAL init(option_t *global_options);
         mBOOL DLLINTERNAL load(const char *filename);
