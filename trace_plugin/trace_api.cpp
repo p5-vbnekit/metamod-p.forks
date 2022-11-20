@@ -176,7 +176,6 @@ void cmd_trace_unset(void) {
 
 // "trace show" console command.
 void cmd_trace_show(void) {
-	api_info_t *routine;
 	int n=0;
 	LOG_CONSOLE(PLID, "Tracing routines:");
 	for(api_info_t *routine=&dllapi_info.pfnGameInit; routine->name; routine++) {
