@@ -15,10 +15,6 @@ set_property(TARGET "${_name}" PROPERTY "PREFIX")
 set_property(TARGET "${_name}" PROPERTY "OUTPUT_NAME" "executable")
 set_property(TARGET "${_name}" PROPERTY "INTERPROCEDURAL_OPTIMIZATION")
 
-if(NOT MSVC)
-    set_property(SOURCE "main.cxx" APPEND PROPERTY COMPILE_FLAGS "-Wno-long-long")
-endif()
-
 target_include_directories("${_name}" PRIVATE "${CMAKE_SOURCE_DIR}/hlsdk/engine")
 
 if(CMAKE_CROSSCOMPILING)
