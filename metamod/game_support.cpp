@@ -62,7 +62,7 @@ game_modlist_t const known_games = {
     // separate file, generated based on game information stored in a
     // convenient db.
     //
-#include "games.h"
+#include "games.inl"
     // End of list terminator:
     {NULL, NULL, NULL, NULL}
 };

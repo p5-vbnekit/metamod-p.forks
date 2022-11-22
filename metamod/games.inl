@@ -1,7 +1,7 @@
 // vi: set ts=4 sw=4 :
 // vim: set tw=75 :
 
-// games.h - list of supported game mods and their data
+// games.inl - list of supported game mods and their data
 
 /*
  * Copyright (c) 2001-2013 Will Day <willday@hpgx.net>
