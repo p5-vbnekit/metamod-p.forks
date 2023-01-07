@@ -36,6 +36,8 @@
 
 #include <extdll.h>			// always
 
+#include <limits>
+
 #include <meta_api.h>		// 
 #include <vdate.h>			// COMPILE_TIME,
 #include <support_meta.h>	// STRNCPY,
@@ -178,32 +180,25 @@ void wd_AlertMessage(ALERT_TYPE atype, char *szFmt, ...) {
 }
 
 void wd_msglist(void) {
-	int i, size;
-	const char *cp;
+	int size_;
 	LOG_CONSOLE(PLID, "registered user msgs:");
-	for(i=0; i < MAX_REG_MSGS; i++) {
-		cp=GET_USER_MSG_NAME(PLID, i, &size);
-		if(cp)
-			LOG_CONSOLE(PLID, "%d %s %d", i, cp, size);
+	for(int id_ = 0; id_ < ::std::numeric_limits<int>::max(); id_++) {
+		size_ = 0;
+		char const * const name_ = GET_USER_MSG_NAME(PLID, id_, &size_);
+		if(! name_) break;
+		LOG_CONSOLE(PLID, "%d %s %d", id_, name_, size_);
 	}
 }
 
 void wd_msgid(void) {
-	const char *msgname;
-	int id;
-	msgname=CMD_ARGV(1);
-	id=GET_USER_MSG_ID(PLID, msgname, NULL);
-	if(id)
-		LOG_CONSOLE(PLID, "%s = %d", msgname, id);
-	else
-		LOG_CONSOLE(PLID, "msg not found: %s", msgname);
+	const char *name_ = CMD_ARGV(1);
+	int const id_ = GET_USER_MSG_ID(PLID, name_, NULL);
+	if (id_) LOG_CONSOLE(PLID, "%s = %d", name_, id_);
+	else LOG_CONSOLE(PLID, "msg not found: %s", name_);
 }
 
 void wd_testit(void) {
-	cvar_t *cv;
-	cv=CVAR_GET_POINTER("csguard_version");
-	if(cv)
-		LOG_CONSOLE(PLID, "csguard_version found!: %d", cv);
-	else
-		LOG_CONSOLE(PLID, "csguard_version not found!");
+	cvar_t const * const variable_ = CVAR_GET_POINTER("csguard_version");
+	if (variable_) LOG_CONSOLE(PLID, "csguard_version found!: %d", variable_);
+	else LOG_CONSOLE(PLID, "csguard_version not found!");
 }

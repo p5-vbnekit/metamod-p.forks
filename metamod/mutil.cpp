@@ -170,7 +170,7 @@ static int mutil_GetUserMsgID(plid_t plid, const char *msgname, int *size) {
 
     if(MRegMsg const *umsg = RegMsgs->find(msgname)) {
         if (size) *size = umsg->size;
-        return umsg->msgid;
+        return umsg->id;
     }
 
     return 0;
@@ -213,7 +213,7 @@ static const char *mutil_GetUserMsgName(plid_t plid, int msgid, int *size) {
         if(size) *size = umsg->size;
         // 'name' is assumed to be a constant string, allocated in the
         // gamedll.
-        return umsg->name;
+        return umsg->name.c_str();
     }
 
     return NULL;

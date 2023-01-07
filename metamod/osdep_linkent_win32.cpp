@@ -29,10 +29,12 @@
  *
  */
 
-#include <extdll.h>		// always
-#include "osdep.h"
+#include <cstdlib>
 
-#include "log_meta.h"			// META_LOG, etc
+#include <extdll.h>         // always
+
+#include "osdep.h"
+#include "log_meta.h"       // META_LOG, etc
 #include "support_meta.h"
 
 
@@ -41,205 +43,185 @@
 //  -- by Jussi Kivilinna
 //
 
-// 
-// Reads metamod.dll and game.dll function export tables and combines theim to 
+//
+// Reads metamod.dll and game.dll function export tables and combines theim to
 // single table that replaces metamod.dll's original table.
-// 
-
-typedef struct sort_names_s {
-	unsigned long  name;
-	unsigned short nameOrdinal;
-} sort_names_t;
-
-//relative virtual address to virtual address
-#define rva_to_va(base, rva) ((unsigned long)base + (unsigned long)rva)
-//virtual address to relative virtual address
-#define va_to_rva(base, va) ((unsigned long)va - (unsigned long)base)
-
 //
-// Checks module signatures and return ntheaders pointer for valid module
-//
-static IMAGE_NT_HEADERS * DLLINTERNAL_NOVIS get_ntheaders(HMODULE module)
-{
-	union { 
-		unsigned long      mem;
-		IMAGE_DOS_HEADER * dos;
-		IMAGE_NT_HEADERS * pe;
-	} mem;
-	
-	//Check if valid dos header
-	mem.mem = (unsigned long)module;
-	if(IsBadReadPtr(mem.dos, sizeof(*mem.dos)) || mem.dos->e_magic != IMAGE_DOS_SIGNATURE)
-		return(0);
-	
-	//Get and check pe header
-	mem.mem = rva_to_va(module, mem.dos->e_lfanew);
-	if(IsBadReadPtr(mem.pe, sizeof(*mem.pe)) || mem.pe->Signature != IMAGE_NT_SIGNATURE)
-		return(0);
-	
-	return(mem.pe);
+
+struct sort_names_t_ {
+    ::size_t name;
+    unsigned short name_ordinal;
+};
+
+// relative virtual address to virtual address
+inline static ::size_t rva_to_va_(void const *base, ::size_t address) {
+    return reinterpret_cast< ::size_t>(base) + address;
 }
 
-//
-// Returns export table for valid module
-//
-static IMAGE_EXPORT_DIRECTORY * DLLINTERNAL_NOVIS get_export_table(HMODULE module)
-{
-	union { 
-		unsigned long            mem;
-		void *                   pvoid;
-		IMAGE_DOS_HEADER       * dos;
-		IMAGE_NT_HEADERS       * pe;
-		IMAGE_EXPORT_DIRECTORY * export_dir;
-	} mem;
-	
-	//Check module
-	mem.pe = get_ntheaders(module);
-	if(!mem.pe)
-		return(0);
-	
-	//Check for exports
-	if(!mem.pe->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_EXPORT].VirtualAddress)
-		return(0);
-	
-	mem.mem = rva_to_va(module, mem.pe->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_EXPORT].VirtualAddress);
-	if(IsBadReadPtr(mem.export_dir, sizeof(*mem.export_dir)))
-		return(0);
-	
-	return(mem.export_dir);
+// virtual address to relative virtual address
+inline static ::size_t va_to_rva_(void const *base, ::size_t address) {
+    return address - reinterpret_cast< ::size_t>(base);
 }
 
-//
-// Sort function for qsort
-//
-static int sort_names_list(const sort_names_t * A, const sort_names_t * B)
-{
-	const char * str_A = (const char *)A->name;
-	const char * str_B = (const char *)B->name;
-	
-	return(mm_strcmp(str_A, str_B));
+// checks module signatures and return NT headers pointer for valid module
+inline static ::IMAGE_NT_HEADERS const * get_nt_headers_(::HMODULE module) {
+    union {
+        ::size_t raw_address;
+        ::IMAGE_DOS_HEADER const *dos;
+        ::IMAGE_NT_HEADERS const *pe;
+    } union_;
+
+    // check if valid dos header
+    union_.raw_address = reinterpret_cast< ::size_t>(module);
+    if (::IsBadReadPtr(union_.dos, sizeof(*union_.dos)) || (IMAGE_DOS_SIGNATURE != union_.dos->e_magic)) return 0;
+
+    // get and check pe header
+    union_.raw_address = rva_to_va_(module, union_.dos->e_lfanew);
+    if (::IsBadReadPtr(union_.pe, sizeof(*union_.pe)) || (IMAGE_NT_SIGNATURE != union_.pe->Signature)) return 0;
+
+    return union_.pe;
 }
 
-//
-// Combines moduleMM and moduleGame export tables and replaces moduleMM table with new one
-//
-static int DLLINTERNAL_NOVIS combine_module_export_tables(HMODULE moduleMM, HMODULE moduleGame)
-{
-	IMAGE_EXPORT_DIRECTORY * exportMM;
-	IMAGE_EXPORT_DIRECTORY * exportGame;
-	
-	unsigned long    newNumberOfFunctions;
-	unsigned long    newNumberOfNames;
-	unsigned long  * newFunctions;
-	unsigned long  * newNames;
-	unsigned short * newNameOrdinals;
-	sort_names_t   * newSort;
-	
-	unsigned long i;
-	unsigned long u;
-	unsigned long funcCount;
-	unsigned long nameCount;
-	unsigned long listFix;
-	
-	//Get export tables
-	exportMM   = get_export_table(moduleMM);
-	exportGame = get_export_table(moduleGame);
-	if(!exportMM || !exportGame)
-	{
-		META_ERROR("Couldn't initialize dynamic linkents, exportMM: %i, exportGame: %i.  Exiting...", exportMM, exportGame);
-		return(0);
-	}
-	
-	//setup new export table
-	newNumberOfFunctions = exportMM->NumberOfFunctions + exportGame->NumberOfFunctions;
-	newNumberOfNames     = exportMM->NumberOfNames     + exportGame->NumberOfNames;
-	
-	//alloc lists
-	*(void**)&newFunctions = calloc(1, newNumberOfFunctions * sizeof(*newFunctions));
-	*(void**)&newSort      = calloc(1, newNumberOfNames * sizeof(*newSort));
-	
-	//copy moduleMM to new export
-	for(funcCount = 0; funcCount < exportMM->NumberOfFunctions; funcCount++)
-		newFunctions[funcCount] = rva_to_va(moduleMM, ((unsigned long*)rva_to_va(moduleMM, exportMM->AddressOfFunctions))[funcCount]);
-	for(nameCount = 0; nameCount < exportMM->NumberOfNames; nameCount++)
-	{
-		//fix name address
-		newSort[nameCount].name = rva_to_va(moduleMM, ((unsigned long*)rva_to_va(moduleMM, exportMM->AddressOfNames))[nameCount]);
-		//ordinal is index to function list
-		newSort[nameCount].nameOrdinal = ((unsigned short *)rva_to_va(moduleMM, exportMM->AddressOfNameOrdinals))[nameCount];
-	}
-	
-	//copy moduleGame to new export
-	for(i = 0; i < exportGame->NumberOfFunctions; i++)
-		newFunctions[funcCount + i] = rva_to_va(moduleGame, ((unsigned long*)rva_to_va(moduleGame, exportGame->AddressOfFunctions))[i]);
-	for(i = 0, listFix = 0; i < exportGame->NumberOfNames; i++)
-	{
-		const char * name = (const char *)rva_to_va(moduleGame, ((unsigned long*)rva_to_va(moduleGame, exportGame->AddressOfNames))[i]);
-		//Check if name already in the list
-		for(u = 0; u < nameCount; u++)
-		{
-			if(!strcasecmp(name, (const char*)newSort[u].name))
-			{
-				listFix -= 1;
-				break;
-			}
-		}
-		if(u < nameCount) //already in the list.. skip
-			continue;
-		
-		newSort[nameCount + i + listFix].name = (unsigned long)name;
-		newSort[nameCount + i + listFix].nameOrdinal = (unsigned short)funcCount + ((unsigned short *)rva_to_va(moduleGame, exportGame->AddressOfNameOrdinals))[i];
-	}
-	
-	//set new number
-	newNumberOfNames = nameCount + i + listFix;
-	
-	//sort names list
-	qsort(newSort, newNumberOfNames, sizeof(*newSort), (int(*)(const void*, const void*))&sort_names_list);
-	
-	//make newNames and newNameOrdinals lists (VirtualAlloc so we dont waste heap memory to stuff that isn't freed)
-	*(void**)&newNames        = VirtualAlloc(0, newNumberOfNames * sizeof(*newNames), MEM_COMMIT, PAGE_READWRITE);
-	*(void**)&newNameOrdinals = VirtualAlloc(0, newNumberOfNames * sizeof(*newNameOrdinals), MEM_COMMIT, PAGE_READWRITE);
-	
-	for(i = 0; i < newNumberOfNames; i++)
-	{
-		newNames[i]        = newSort[i].name;
-		newNameOrdinals[i] = newSort[i].nameOrdinal;
-	}
-	
-	free(newSort);
-	
-	//translate VAs to RVAs
-	for(i = 0; i < newNumberOfFunctions; i++)
-		newFunctions[i] = va_to_rva(moduleMM, newFunctions[i]);
-	for(i = 0; i < newNumberOfNames; i++)
-	{
-		newNames[i] = va_to_rva(moduleMM, newNames[i]);
-		newNameOrdinals[i] = (unsigned short)va_to_rva(moduleMM, newNameOrdinals[i]);
-	}
-	
-	DWORD OldProtect;
-	if(!VirtualProtect(exportMM, sizeof(*exportMM), PAGE_READWRITE, &OldProtect))
-	{
-		META_ERROR("Couldn't initialize dynamic linkents, VirtualProtect failed: %i.  Exiting...", GetLastError());
-		return(0);
-	}
-	
-	exportMM->Base              = 1;
-	exportMM->NumberOfFunctions = newNumberOfFunctions;
-	exportMM->NumberOfNames     = newNumberOfNames;
-	*(unsigned long*)&(exportMM->AddressOfFunctions)    = va_to_rva(moduleMM, newFunctions);
-	*(unsigned long*)&(exportMM->AddressOfNames)        = va_to_rva(moduleMM, newNames);
-	*(unsigned long*)&(exportMM->AddressOfNameOrdinals) = va_to_rva(moduleMM, newNameOrdinals);
-	
-	VirtualProtect(exportMM, sizeof(*exportMM), OldProtect, &OldProtect);
-	return(1);
+// returns export table for valid module
+inline static ::IMAGE_EXPORT_DIRECTORY * get_export_table_(::HMODULE module) {
+    union {
+        ::size_t raw_address;
+        ::IMAGE_DOS_HEADER const *dos;
+        ::IMAGE_NT_HEADERS const *pe;
+        ::IMAGE_EXPORT_DIRECTORY *export_dir;
+    } union_;
+
+    union_.pe = get_nt_headers_(module);
+
+    ::DWORD const virtual_pe_export_address_ = union_.pe->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_EXPORT].VirtualAddress;
+    if (! virtual_pe_export_address_) return 0;
+
+    union_.raw_address = rva_to_va_(module, virtual_pe_export_address_);
+    if (::IsBadReadPtr(union_.export_dir, sizeof(*union_.export_dir))) return 0;
+
+    return union_.export_dir;
 }
 
-//
-// ...
-//
-int DLLINTERNAL init_linkent_replacement(DLHANDLE moduleMetamod, DLHANDLE moduleGame)
-{
-	return(combine_module_export_tables(moduleMetamod, moduleGame));
+// sort function for qsort
+inline static int sort_names_comparator_(sort_names_t_ const *A, sort_names_t_ const *B) {
+    char const *str_A = (char const *)A->name;
+    char const *str_B = (char const *)B->name;
+    return mm_strcmp(str_A, str_B);
+}
+
+// combines `meta` and `game` export tables and replaces `meta` table with new one
+inline static int combine_export_tables_(::HMODULE meta, ::HMODULE game) {
+    // get export tables
+    ::IMAGE_EXPORT_DIRECTORY * const meta_export_table_ = get_export_table_(meta);
+    ::IMAGE_EXPORT_DIRECTORY const * const game_export_table_ = get_export_table_(game);
+
+    if ((! meta_export_table_) || (! game_export_table_)) {
+        META_ERROR("Couldn't initialize dynamic linkents, metamod: %i, gamedll: %i. Exiting...", meta_export_table_, game_export_table_);
+        return 0;
+    }
+
+    // setup new export table
+    ::size_t new_number_of_names_ = meta_export_table_->NumberOfNames + game_export_table_->NumberOfNames;
+    ::size_t const new_number_of_functions_ = meta_export_table_->NumberOfFunctions + game_export_table_->NumberOfFunctions;
+
+    // allocating lists
+    sort_names_t_ * const sorted_ = reinterpret_cast<sort_names_t_ *>(::std::calloc(1, new_number_of_names_ * sizeof(*sorted_)));
+    unsigned long * const new_functions_ = reinterpret_cast<unsigned long *>(::std::calloc(1, new_number_of_functions_ * sizeof(*new_functions_)));
+
+    unsigned long names_count_;
+
+    for (names_count_ = 0; names_count_ < meta_export_table_->NumberOfNames; names_count_++) {
+        // fix name address
+        sorted_[names_count_].name = rva_to_va_(meta, ((unsigned long *)rva_to_va_(meta, meta_export_table_->AddressOfNames))[names_count_]);
+        // ordinal is index to function list
+        sorted_[names_count_].name_ordinal = ((unsigned short *)rva_to_va_(meta, meta_export_table_->AddressOfNameOrdinals))[names_count_];
+    }
+
+    unsigned long functions_count_;
+
+    // copy meta functions to new export
+    for (functions_count_ = 0; functions_count_ < meta_export_table_->NumberOfFunctions; functions_count_++) {
+        new_functions_[functions_count_] = rva_to_va_(meta, ((unsigned long *)rva_to_va_(meta, meta_export_table_->AddressOfFunctions))[functions_count_]);
+    }
+
+    unsigned long i_;
+
+    // copy game functions to new export
+    for (i_ = 0; i_ < game_export_table_->NumberOfFunctions; i_++) {
+        new_functions_[functions_count_ + i_] = rva_to_va_(game, ((unsigned long *)rva_to_va_(game, game_export_table_->AddressOfFunctions))[i_]);
+    }
+
+    unsigned long u_;
+    unsigned long list_fix_;
+
+    for (i_ = 0, list_fix_ = 0; i_ < game_export_table_->NumberOfNames; i_++) {
+        char const * const name = (char const *)rva_to_va_(game, ((unsigned long *)rva_to_va_(game, game_export_table_->AddressOfNames))[i_]);
+
+        // check if name already in the list
+        for (u_ = 0; u_ < names_count_; u_++) {
+            if (! strcasecmp(name, (char const *)sorted_[u_].name)) {
+                list_fix_ -= 1;
+                break;
+            }
+        }
+
+        if (u_ < names_count_) continue; // already in the list.. skip
+
+        sorted_[names_count_ + i_ + list_fix_].name = reinterpret_cast< ::size_t>(name);
+        sorted_[names_count_ + i_ + list_fix_].name_ordinal = (unsigned short)functions_count_ + ((unsigned short *)rva_to_va_(game, game_export_table_->AddressOfNameOrdinals))[i_];
+    }
+
+    // set new number
+    new_number_of_names_ = names_count_ + i_ + list_fix_;
+
+    // sort names list
+    ::std::qsort(
+        sorted_, new_number_of_names_, sizeof(*sorted_),
+        reinterpret_cast<int(*)(void const *, void const *)>(&sort_names_comparator_)
+    );
+
+    // make new_names_ list (VirtualAlloc so we dont waste heap memory to stuff that isn't freed)
+    unsigned long * const new_names_ = reinterpret_cast<unsigned long *>(::VirtualAlloc(
+        0, new_number_of_names_ * sizeof(*new_names_), MEM_COMMIT, PAGE_READWRITE
+    ));
+
+    // make new_name_ordinals_ list (VirtualAlloc so we dont waste heap memory to stuff that isn't freed)
+    unsigned short * const new_name_ordinals_ = reinterpret_cast<unsigned short *>(::VirtualAlloc(
+        0, new_number_of_names_ * sizeof(*new_name_ordinals_), MEM_COMMIT, PAGE_READWRITE
+    ));
+
+    for (i_ = 0; i_ < new_number_of_names_; i_++) {
+        new_names_[i_] = sorted_[i_].name;
+        new_name_ordinals_[i_] = sorted_[i_].name_ordinal;
+    }
+
+    ::std::free(sorted_);
+
+    // translate VAs to RVAs
+    for (i_ = 0; i_ < new_number_of_functions_; i_++) new_functions_[i_] = va_to_rva_(meta, new_functions_[i_]);
+    for (i_ = 0; i_ < new_number_of_names_; i_++) {
+        new_names_[i_] = va_to_rva_(meta, new_names_[i_]);
+        new_name_ordinals_[i_] = (unsigned short)va_to_rva_(meta, new_name_ordinals_[i_]);
+    }
+
+    ::DWORD old_meta_export_protection_flags_ = 0;
+    if (! ::VirtualProtect(meta_export_table_, sizeof(*meta_export_table_), PAGE_READWRITE, &old_meta_export_protection_flags_)) {
+        META_ERROR("Couldn't initialize dynamic linkents, VirtualProtect failed: %i. Exiting...", ::GetLastError());
+        return 0;
+    }
+
+    meta_export_table_->Base = 1;
+    meta_export_table_->NumberOfNames = new_number_of_names_;
+    meta_export_table_->NumberOfFunctions = new_number_of_functions_;
+
+    meta_export_table_->AddressOfNames = va_to_rva_(meta, reinterpret_cast< ::size_t>(new_names_));
+    meta_export_table_->AddressOfFunctions = va_to_rva_(meta, reinterpret_cast< ::size_t>(new_functions_));
+    meta_export_table_->AddressOfNameOrdinals = va_to_rva_(meta, reinterpret_cast< ::size_t>(new_name_ordinals_));
+
+    ::VirtualProtect(meta_export_table_, sizeof(*meta_export_table_), old_meta_export_protection_flags_, &old_meta_export_protection_flags_);
+    return 1;
+}
+
+int DLLINTERNAL init_linkent_replacement(::DLHANDLE meta, ::DLHANDLE game) {
+    return combine_export_tables_(meta, game);
 }

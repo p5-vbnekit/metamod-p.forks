@@ -52,13 +52,13 @@ MConfig::MConfig(void):
 
 // Initialize default values from the stored options struct.  Has to happen
 // _after_ constructor, so that all the fields are allocated (d'oh).
-void DLLINTERNAL MConfig::init(option_t *global_options) {
+DLLINTERNAL void MConfig::init(option_t *global_options) {
     option_t *optp;
     list = global_options;
     for(optp = list; optp->name; optp++) set(optp, optp->init);
 }
 
-option_t * DLLINTERNAL MConfig::find(const char *lookup) {
+DLLINTERNAL option_t * MConfig::find(const char *lookup) {
     option_t *optp;
 
     for(optp = list; optp->name && !strmatch(optp->name, lookup); optp++);
@@ -66,14 +66,14 @@ option_t * DLLINTERNAL MConfig::find(const char *lookup) {
     RETURN_ERRNO(NULL, ME_NOTFOUND);
 }
 
-mBOOL DLLINTERNAL MConfig::set(const char *key, const char *value) {
+DLLINTERNAL mBOOL MConfig::set(const char *key, const char *value) {
     option_t *optp;
     optp=find(key);
     if(optp) return(set(optp, value));
     RETURN_ERRNO(mFALSE, ME_NOTFOUND);
 }
 
-mBOOL DLLINTERNAL MConfig::set(option_t *setp, const char *setstr) {
+DLLINTERNAL mBOOL MConfig::set(option_t *setp, const char *setstr) {
     char pathbuf[PATH_MAX];
     int *optval = (int *) setp->dest;
     char **optstr = (char **) setp->dest;
@@ -140,7 +140,7 @@ mBOOL DLLINTERNAL MConfig::set(option_t *setp, const char *setstr) {
     return(mTRUE);
 }
 
-mBOOL DLLINTERNAL MConfig::load(const char *fn) {
+DLLINTERNAL mBOOL MConfig::load(const char *fn) {
     FILE *fp;
     char loadfile[PATH_MAX];
     char line[MAX_CONF_LEN];

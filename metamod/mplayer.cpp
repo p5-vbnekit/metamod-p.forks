@@ -73,7 +73,7 @@ MPlayer::MPlayer(const MPlayer& rhs)
 
 
 // Assignment operator
-MPlayer& DLLINTERNAL MPlayer::operator=(const MPlayer& rhs)
+DLLINTERNAL MPlayer & MPlayer::operator=(const MPlayer& rhs)
 {
 	isQueried = rhs.isQueried;
 
@@ -127,7 +127,7 @@ void DLLINTERNAL MPlayer::clear_cvar_query(const char* /*cvar*/)
 // Check if a client cvar is queried for this player
 // Returns NULL if not
 // or the name of the cvar.
-const char * DLLINTERNAL MPlayer::is_querying_cvar(void)
+DLLINTERNAL const char * MPlayer::is_querying_cvar(void)
 {
 	if(isQueried) {
 		return(cvarName);
@@ -141,7 +141,7 @@ const char * DLLINTERNAL MPlayer::is_querying_cvar(void)
 // Mark a player as querying a client cvar and stores the cvar name
 // meta_errno values:
 //  - ME_ARGUMENT  cvar is NULL
-void DLLINTERNAL MPlayerList::set_player_cvar_query(const edict_t *pEntity, const char *cvar)
+DLLINTERNAL void MPlayerList::set_player_cvar_query(const edict_t *pEntity, const char *cvar)
 {
 	int indx = ENTINDEX(const_cast<edict_t*>(pEntity));
 
@@ -178,7 +178,7 @@ void DLLINTERNAL MPlayerList::clear_all_cvar_queries(void)
 // or the name of the cvar.
 // meta_errno values:
 //  - ME_NOTFOUND  invalid entity
-const char* DLLINTERNAL MPlayerList::is_querying_cvar(const edict_t *pEntity)
+DLLINTERNAL const char * MPlayerList::is_querying_cvar(const edict_t *pEntity)
 {
 	int indx = ENTINDEX(const_cast<edict_t*>(pEntity));
 

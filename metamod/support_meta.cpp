@@ -101,7 +101,7 @@ int DLLINTERNAL valid_gamedir_file(const char *path) {
 //
 // Much like realpath, buffer pointed to by fullpath is assumed to be 
 // able to store a string of PATH_MAX length.
-char * DLLINTERNAL full_gamedir_path(const char *path, char *fullpath) {
+DLLINTERNAL char * full_gamedir_path(const char *path, char *fullpath) {
 	char buf[PATH_MAX];
 
 	// Build pathname from filename, plus gamedir if relative path.

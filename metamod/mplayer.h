@@ -55,17 +55,16 @@ private:
 	mBOOL isQueried;                         // is this player currently queried for a cvar value
 	char *cvarName;                          // name of the cvar if getting queried
 	
-	MPlayer (const MPlayer&) DLLINTERNAL;
-	MPlayer& operator=(const MPlayer&) DLLINTERNAL; 
-
+	DLLINTERNAL MPlayer (const MPlayer&);
+	DLLINTERNAL MPlayer& operator=(const MPlayer&); 
 
 public:
-	MPlayer() DLLINTERNAL;
-	~MPlayer() DLLINTERNAL;
-	void        DLLINTERNAL set_cvar_query(const char *cvar);            // mark this player as querying a client cvar
-	void        DLLINTERNAL clear_cvar_query(const char *cvar=NULL);     // unmark this player as querying a client cvar
-	const char *DLLINTERNAL is_querying_cvar(void);                      // check if a player is querying a cvar. returns
-	                                                                     //   NULL if not or the name of the cvar
+	DLLINTERNAL MPlayer();
+	DLLINTERNAL ~MPlayer();
+	DLLINTERNAL void         	set_cvar_query(const char *cvar);           // mark this player as querying a client cvar
+	DLLINTERNAL void         	clear_cvar_query(const char *cvar=NULL);    // unmark this player as querying a client cvar
+	DLLINTERNAL const char *	is_querying_cvar(void);                   	// check if a player is querying a cvar. returns
+	                                                                     	//   NULL if not or the name of the cvar
 };
 
 
@@ -81,10 +80,10 @@ private:
 
 	
 public:
-	void        DLLINTERNAL set_player_cvar_query(const edict_t *pEntity, const char *cvar);
-	void        DLLINTERNAL clear_player_cvar_query(const edict_t *pEntity, const char *cvar=NULL);
-	void        DLLINTERNAL clear_all_cvar_queries(void);
-	const char *DLLINTERNAL is_querying_cvar(const edict_t *pEntity);
+	DLLINTERNAL void set_player_cvar_query(const edict_t *pEntity, const char *cvar);
+	DLLINTERNAL void clear_player_cvar_query(const edict_t *pEntity, const char *cvar=NULL);
+	DLLINTERNAL void clear_all_cvar_queries(void);
+	DLLINTERNAL const char * is_querying_cvar(const edict_t *pEntity);
 };
 
 

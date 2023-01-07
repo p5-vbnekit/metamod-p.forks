@@ -29,192 +29,207 @@
  *
  */
 
-#include <extdll.h>			// always
+#include <cstddef>
 
-#include "osdep_p.h"			// me
-#include "support_meta.h"		// STRNCPY
+#if defined(__cplusplus) && (201103L <= __cplusplus)
+#include <cstdint>
+#else
+#include "stdint.h"
+#endif
 
-//check for invalid handle values
-#define is_invalid_handle(X) ((X)==0 || (X)==INVALID_HANDLE_VALUE)
+#include <extdll.h>         // always
 
-//relative virtual address to virtual address
-#define rva_to_va(base, rva) ((unsigned long)base + (unsigned long)rva)
-//virtual address to relative virtual address
-#define va_to_rva(base, va) ((unsigned long)va - (unsigned long)base)
+#include "osdep_p.h"        // me
+#include "support_meta.h"   // STRNCPY
 
 
-static unsigned long DLLINTERNAL_NOVIS va_to_mapaddr(void * mapview, IMAGE_SECTION_HEADER * sections, int num_sects, unsigned long vaddr) {
-	for(int i = 0; i < num_sects; i++)
-		if(vaddr >= sections[i].VirtualAddress && vaddr < sections[i].VirtualAddress + sections[i].SizeOfRawData)
-			return(rva_to_va(mapview, (vaddr - sections[i].VirtualAddress + sections[i].PointerToRawData)));
-
-	return(0);
+// check for invalid handle values
+inline bool is_invalid_handle(void const *handle) {
+    return (0 == handle) || (INVALID_HANDLE_VALUE == handle);
 }
 
-// Checks module signatures and return ntheaders pointer for valid module
-static IMAGE_NT_HEADERS * DLLINTERNAL_NOVIS get_ntheaders(void * mapview) {
-	union {
-		unsigned long      mem;
-		IMAGE_DOS_HEADER * dos;
-		IMAGE_NT_HEADERS * pe;
-	} mem;
+// relative virtual address to virtual address
+inline static ::size_t rva_to_va(void const *base, ::DWORD address) {
+    return reinterpret_cast< ::size_t>(base) + address;
+}
 
-	//Check if valid dos header
-	mem.mem = (unsigned long)mapview;
-	if(IsBadReadPtr(mem.dos, sizeof(*mem.dos)) || mem.dos->e_magic != IMAGE_DOS_SIGNATURE)
-		return(0);
+// relative virtual address to mapping virtual address
+inline static ::size_t rva_to_mva(
+    void const *mapping, ::IMAGE_SECTION_HEADER const *sections,
+    int sections_count, ::DWORD address
+) {
+    for (int index_ = 0; index_ < sections_count; index_++) {
+        bool const condition_ = (
+            (address >= sections[index_].VirtualAddress) &&
+            (address < (sections[index_].VirtualAddress + sections[index_].SizeOfRawData))
+        );
+        if (condition_) return rva_to_va(
+            mapping, (address - sections[index_].VirtualAddress + sections[index_].PointerToRawData)
+        );
+    }
 
-	//Get and check pe header
-	mem.mem = rva_to_va(mapview, mem.dos->e_lfanew);
-	if(IsBadReadPtr(mem.pe, sizeof(*mem.pe)) || mem.pe->Signature != IMAGE_NT_SIGNATURE)
-		return(0);
+    return 0;
+}
 
-	return(mem.pe);
+// Checks module signatures and return NT headers pointer for valid module
+inline static ::IMAGE_NT_HEADERS const * get_nt_headers(void const *mapping) {
+    union {
+        ::size_t raw_address;
+        ::IMAGE_DOS_HEADER const *dos;
+        ::IMAGE_NT_HEADERS const *pe;
+    } union_;
+
+    // Check if valid dos header
+    union_.raw_address = reinterpret_cast< ::size_t>(mapping);
+    if (::IsBadReadPtr(union_.dos, sizeof(*union_.dos)) || (IMAGE_DOS_SIGNATURE != union_.dos->e_magic)) return 0;
+
+    // Get and check pe header
+    union_.raw_address = rva_to_va(mapping, union_.dos->e_lfanew);
+    if (::IsBadReadPtr(union_.pe, sizeof(*union_.pe)) || (IMAGE_NT_SIGNATURE != union_.pe->Signature)) return 0;
+
+    return union_.pe;
 }
 
 // Returns export table for valid module
-static IMAGE_EXPORT_DIRECTORY * DLLINTERNAL_NOVIS get_export_table(void * mapview, IMAGE_NT_HEADERS * ntheaders, IMAGE_SECTION_HEADER * sections, int num_sects) {
-	union {
-		unsigned long            mem;
-		void *                   pvoid;
-		IMAGE_DOS_HEADER       * dos;
-		IMAGE_NT_HEADERS       * pe;
-		IMAGE_EXPORT_DIRECTORY * export_dir;
-	} mem;
+inline static ::IMAGE_EXPORT_DIRECTORY const * get_export_table(
+    void const *mapping, ::IMAGE_NT_HEADERS const *nt_headers,
+    ::IMAGE_SECTION_HEADER const *sections, int sections_count
+) {
+    union {
+        ::size_t raw_address;
+        ::IMAGE_DOS_HEADER const *dos;
+        ::IMAGE_NT_HEADERS const *pe;
+        ::IMAGE_EXPORT_DIRECTORY const *export_dir;
+    } union_;
 
-	mem.pe = ntheaders;
+    union_.pe = nt_headers;
 
-	//Check for exports
-	if(!mem.pe->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_EXPORT].VirtualAddress)
-		return(0);
+    ::DWORD const virtual_pe_export_address_ = union_.pe->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_EXPORT].VirtualAddress;
+    if (! virtual_pe_export_address_) return 0;
 
-	mem.mem = va_to_mapaddr(mapview, sections, num_sects, mem.pe->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_EXPORT].VirtualAddress);
-	if(IsBadReadPtr(mem.export_dir, sizeof(*mem.export_dir)))
-		return(0);
+    union_.raw_address = rva_to_mva(mapping, sections, sections_count, virtual_pe_export_address_);
+    if (::IsBadReadPtr(union_.export_dir, sizeof(*union_.export_dir))) return 0;
 
-	return(mem.export_dir);
+    return union_.export_dir;
 }
 
-mBOOL DLLINTERNAL is_gamedll(const char *filename) {
-	HANDLE hFile;
-	HANDLE hMap;
-	void * mapview;
-	IMAGE_NT_HEADERS * ntheaders;
-	IMAGE_SECTION_HEADER * sections;
-	int num_sects;
-	IMAGE_EXPORT_DIRECTORY * exports;
+mBOOL DLLINTERNAL is_gamedll(char const *path) {
+    // Try open file for read
+    ::HANDLE const file_handle_ = ::CreateFileA(path, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+    if (is_invalid_handle(file_handle_)) {
+        META_DEBUG(3, ("is_gamedll(%s): CreateFile() failed.", path));
+        return mFALSE;
+    }
 
-	int has_GiveFnptrsToDll = 0;
-	int has_GetEntityAPI2 = 0;
-	int has_GetEntityAPI = 0;
+    ::HANDLE const mapping_handle_ = ::CreateFileMappingA(file_handle_, NULL, PAGE_READONLY, 0, 0, NULL);
+    if (is_invalid_handle(mapping_handle_)) {
+        META_DEBUG(3, ("is_gamedll(%s): CreateFileMapping() failed.", path));
+        ::CloseHandle(file_handle_);
+        return mFALSE;
+    }
 
-	// Try open file for read
-	hFile = CreateFileA(filename, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
-	if(is_invalid_handle(hFile)) {
-		META_DEBUG(3, ("is_gamedll(%s): CreateFile() failed.", filename));
-		return(mFALSE);
-	}
+    void const * const mapping_view_ = ::MapViewOfFile(mapping_handle_, FILE_MAP_READ, 0, 0, 0);
+    if (! mapping_view_) {
+        META_DEBUG(3, ("is_gamedll(%s): MapViewOfFile() failed.", path));
+        ::CloseHandle(mapping_handle_);
+        ::CloseHandle(file_handle_);
+        return mFALSE;
+    }
 
-	hMap = CreateFileMapping(hFile, NULL, PAGE_READONLY, 0, 0, NULL);
-	if(is_invalid_handle(hMap)) {
-		META_DEBUG(3, ("is_gamedll(%s): CreateFileMapping() failed.", filename));
-		CloseHandle(hFile);
-		return(mFALSE);
-	}
+    ::IMAGE_NT_HEADERS const * const nt_headers_ = get_nt_headers(mapping_view_);
+    if (! nt_headers_) {
+        META_DEBUG(3, ("is_gamedll(%s): get_ntheaders() failed.", path));
+        ::UnmapViewOfFile(mapping_view_);
+        ::CloseHandle(mapping_handle_);
+        ::CloseHandle(file_handle_);
+        return mFALSE;
+    }
 
-	mapview = MapViewOfFile(hMap, FILE_MAP_READ, 0, 0, 0);
-	if(!mapview) {
-		META_DEBUG(3, ("is_gamedll(%s): MapViewOfFile() failed.", filename));
-		CloseHandle(hMap);
-		CloseHandle(hFile);
-		return(mFALSE);
-	}
+    // Sections for va_to_mapaddr function
+    ::IMAGE_SECTION_HEADER const * const sections_ = IMAGE_FIRST_SECTION(nt_headers_);
+    ::WORD const sections_count_ = nt_headers_->FileHeader.NumberOfSections;
+    if (::IsBadReadPtr(sections_, sections_count_ * sizeof(IMAGE_SECTION_HEADER))) {
+        META_DEBUG(3, ("is_gamedll(%s): IMAGE_FIRST_SECTION() failed.", path));
+        ::UnmapViewOfFile(mapping_view_);
+        ::CloseHandle(mapping_handle_);
+        ::CloseHandle(file_handle_);
+        return mFALSE;
+    }
 
-	ntheaders = get_ntheaders(mapview);
-	if(!ntheaders) {
-		META_DEBUG(3, ("is_gamedll(%s): get_ntheaders() failed.", filename));
-		UnmapViewOfFile(mapview);
-		CloseHandle(hMap);
-		CloseHandle(hFile);
-		return(mFALSE);
-	}
+    ::IMAGE_EXPORT_DIRECTORY const * const exports_ = get_export_table(mapping_view_, nt_headers_, sections_, sections_count_);
+    if (! exports_) {
+        META_DEBUG(3, ("is_gamedll(%s): get_export_table() failed.", path));
+        ::UnmapViewOfFile(mapping_view_);
+        ::CloseHandle(mapping_handle_);
+        ::CloseHandle(file_handle_);
+        return mFALSE;
+    }
 
-	//Sections for va_to_mapaddr function
-	sections = IMAGE_FIRST_SECTION(ntheaders);
-	num_sects = ntheaders->FileHeader.NumberOfSections;
-	if(IsBadReadPtr(sections, num_sects * sizeof(IMAGE_SECTION_HEADER))) {
-		META_DEBUG(3, ("is_gamedll(%s): IMAGE_FIRST_SECTION() failed.", filename));
-		UnmapViewOfFile(mapview);
-		CloseHandle(hMap);
-		CloseHandle(hFile);
-		return(mFALSE);
-	}
+    ::DWORD const * const names_ = reinterpret_cast< ::DWORD const *>(rva_to_mva(
+        mapping_view_, sections_, sections_count_, exports_->AddressOfNames
+    ));
+    if (::IsBadReadPtr(names_, exports_->NumberOfNames * sizeof(unsigned long))) {
+        META_DEBUG(3, ("is_gamedll(%s): Pointer to exported function names is invalid.", path));
+        ::UnmapViewOfFile(mapping_view_);
+        ::CloseHandle(mapping_handle_);
+        ::CloseHandle(file_handle_);
+        return mFALSE;
+    }
 
-	exports = get_export_table(mapview, ntheaders, sections, num_sects);
-	if(!exports) {
-		META_DEBUG(3, ("is_gamedll(%s): get_export_table() failed.", filename));
-		UnmapViewOfFile(mapview);
-		CloseHandle(hMap);
-		CloseHandle(hFile);
-		return(mFALSE);
-	}
+    bool has_GetEntityAPI_ = false;
+    bool has_GetEntityAPI2_ = false;
+    bool has_GiveFnptrsToDll_ = false;
 
-	unsigned long * names = (unsigned long *)va_to_mapaddr(mapview, sections, num_sects, exports->AddressOfNames);
-	if(IsBadReadPtr(names, exports->NumberOfNames * sizeof(unsigned long))) {
-		META_DEBUG(3, ("is_gamedll(%s): Pointer to exported function names is invalid.", filename));
-		UnmapViewOfFile(mapview);
-		CloseHandle(hMap);
-		CloseHandle(hFile);
-		return(mFALSE);
-	}
+    for (unsigned int index_ = 0; index_ < exports_->NumberOfNames; index_++) {
+        // get function name with valid address
+        char const * const function_name_ = reinterpret_cast<char const *>(rva_to_mva(
+            mapping_view_, sections_, sections_count_, names_[index_]
+        ));
+        if (::IsBadStringPtrA(function_name_, 128)) continue;
 
-	for(unsigned int i = 0; i < exports->NumberOfNames; i++) {
-		//get function name with valid address
-		char * funcname = (char *)va_to_mapaddr(mapview, sections, num_sects, names[i]);
-		if(IsBadStringPtrA(funcname, 128))
-			continue;
+        // Check
+        switch (function_name_[0]) {
+            default: break;
 
-		// Check
-		// Fast check for 'G' first
-		if(funcname[0] == 'G') {
-			// Collect export information
-			if(!has_GiveFnptrsToDll)
-				has_GiveFnptrsToDll = strmatch(funcname, "GiveFnptrsToDll");
-			if(!has_GetEntityAPI2)
-				has_GetEntityAPI2   = strmatch(funcname, "GetEntityAPI2");
-	  		if(!has_GetEntityAPI)
-	  			has_GetEntityAPI    = strmatch(funcname, "GetEntityAPI");
-	  	}
-		// Check if metamod plugin
-		else if(funcname[0] == 'M') {
-			if(strmatch(funcname, "Meta_Init") ||
-			   strmatch(funcname, "Meta_Query") ||
-			   strmatch(funcname, "Meta_Attach") ||
-			   strmatch(funcname, "Meta_Detach")) {
-				// Metamod plugin.. is not gamedll
-				META_DEBUG(5, ("is_gamedll(%s): Detected Metamod plugin, library exports [%s].", filename, funcname));
+            case 'G': if (true) {
+                // Check for goldsrc gamedll interface
+                if (! has_GetEntityAPI_) has_GetEntityAPI_ = strmatch(function_name_, "GetEntityAPI");
+                if (! has_GetEntityAPI2_) has_GetEntityAPI2_ = strmatch(function_name_, "GetEntityAPI2");
+                if (! has_GiveFnptrsToDll_) has_GiveFnptrsToDll_ = strmatch(function_name_, "GiveFnptrsToDll");
+            }; break;
 
-				UnmapViewOfFile(mapview);
-				CloseHandle(hMap);
-				CloseHandle(hFile);
+            case 'M': if (true) {
+                // Check if metamod plugin
+                if (
+                    strmatch(function_name_, "Meta_Init") ||
+                    strmatch(function_name_, "Meta_Query") ||
+                    strmatch(function_name_, "Meta_Attach") ||
+                    strmatch(function_name_, "Meta_Detach")
+                ) {
+                    // Metamod plugin.. is not gamedll
+                    META_DEBUG(5, ("is_gamedll(%s): Detected Metamod plugin, library exports [%s].", path, function_name_));
 
-				return(mFALSE);
-			}
-		}
-	}
+                    ::UnmapViewOfFile(mapping_view_);
+                    ::CloseHandle(mapping_handle_);
+                    ::CloseHandle(file_handle_);
 
-	UnmapViewOfFile(mapview);
-	CloseHandle(hMap);
-	CloseHandle(hFile);
+                    return mFALSE;
+                }
+            }; break;
+        }
+    }
 
-	// Check if gamedll
-	if(has_GiveFnptrsToDll && (has_GetEntityAPI2 || has_GetEntityAPI)) {
-		// This is gamedll!
-		META_DEBUG(5, ("is_gamedll(%s): Detected GameDLL.", filename));
+    ::UnmapViewOfFile(mapping_view_);
+    ::CloseHandle(mapping_handle_);
+    ::CloseHandle(file_handle_);
 
-		return(mTRUE);
-	} else {
-		META_DEBUG(5, ("is_gamedll(%s): Library isn't GameDLL.", filename));
-		return(mFALSE);
-	}
+    // Check if gamedll
+    if (has_GiveFnptrsToDll_ && (has_GetEntityAPI2_ || has_GetEntityAPI_)) {
+        // This is gamedll!
+        META_DEBUG(5, ("is_gamedll(%s): Detected GameDLL.", path));
+        return mTRUE;
+    }
+
+    META_DEBUG(5, ("is_gamedll(%s): Library isn't GameDLL.", path));
+    return mFALSE;
 }

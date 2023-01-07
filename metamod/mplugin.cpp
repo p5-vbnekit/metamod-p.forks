@@ -314,7 +314,7 @@ mBOOL DLLINTERNAL MPlugin::resolve(void) {
 //     GAMEDIR/dlls/filename
 // meta_errno values:
 //  - none
-char * DLLINTERNAL MPlugin::resolve_dirs(const char *path) {
+DLLINTERNAL char * MPlugin::resolve_dirs(const char *path) {
     struct stat st;
     static char buf[PATH_MAX];
     char *found;
@@ -344,7 +344,7 @@ char * DLLINTERNAL MPlugin::resolve_dirs(const char *path) {
 //     dir/file
 // meta_errno values:
 //  - none
-char * DLLINTERNAL MPlugin::resolve_prefix(const char *path) {
+DLLINTERNAL char * MPlugin::resolve_prefix(const char *path) {
     struct stat st;
     char *cp, *fname;
     char dname[PATH_MAX];
@@ -387,7 +387,7 @@ char * DLLINTERNAL MPlugin::resolve_prefix(const char *path) {
 //     path_i386.so, path_i486.so, etc (if linux)
 // meta_errno values:
 //  - none
-char * DLLINTERNAL MPlugin::resolve_suffix(const char *path) {
+DLLINTERNAL char * MPlugin::resolve_suffix(const char *path) {
     struct stat st;
     static char buf[PATH_MAX];
     static char tmpbuf[PATH_MAX];
@@ -454,7 +454,7 @@ char * DLLINTERNAL MPlugin::resolve_suffix(const char *path) {
 // Check if a passed string starts with a known platform postfix.
 // It does not check beyond the period in order to work for both
 // Linux and Win32.
-mBOOL DLLINTERNAL MPlugin::is_platform_postfix(const char *pf) {
+DLLINTERNAL mBOOL MPlugin::is_platform_postfix(const char *pf) {
     typedef struct { const char * postfix; size_t len; } postfix_t;
     static const postfix_t postfixes[] = {
         {"_i386.", 6},
@@ -491,7 +491,7 @@ mBOOL DLLINTERNAL MPlugin::is_platform_postfix(const char *pf) {
 //  the part up to the last dot, if one exists.
 // meta_errno values:
 //  - none
-mBOOL DLLINTERNAL MPlugin::platform_match(MPlugin* other) {
+DLLINTERNAL mBOOL MPlugin::platform_match(MPlugin* other) {
     char *end, *other_end;
     int prefixlen;
 
@@ -539,7 +539,7 @@ mBOOL DLLINTERNAL MPlugin::platform_match(MPlugin* other) {
 //  - errno's from query()
 //  - errno's from attach()
 //  - errno's from check_input()
-mBOOL DLLINTERNAL MPlugin::load(PLUG_LOADTIME now) {
+DLLINTERNAL mBOOL MPlugin::load(PLUG_LOADTIME now) {
     if(!check_input()) {
         // details logged, meta_errno set in check_input()
         RETURN_ERRNO(mFALSE, ME_ARGUMENT);
@@ -636,7 +636,7 @@ mBOOL DLLINTERNAL MPlugin::load(PLUG_LOADTIME now) {
 //  - ME_DLMISSING  couldn't find a query() or giveFuncs() in plugin
 //  - ME_DLERROR    plugin query() returned error
 //  - ME_NULLDATA   info struct from query() was null
-mBOOL DLLINTERNAL MPlugin::query(void) {
+DLLINTERNAL mBOOL MPlugin::query(void) {
     int plugin_pext_version;
     META_GIVE_PEXT_FUNCTIONS_FN pfn_give_pext_funcs;
     META_INIT_FN pfn_init;
@@ -1397,7 +1397,7 @@ mBOOL DLLINTERNAL MPlugin::newer_file(void) {
 // SHOW is max 4 chars, for "show" output.
 // meta_errno values:
 //  - none
-const char * DLLINTERNAL MPlugin::str_status(STR_STATUS fmt) {
+DLLINTERNAL const char * MPlugin::str_status(STR_STATUS fmt) {
     switch(status) {
         case PL_EMPTY:
             if(fmt==ST_SHOW) return("empt");
@@ -1431,7 +1431,7 @@ const char * DLLINTERNAL MPlugin::str_status(STR_STATUS fmt) {
 // SHOW is max 4 chars, for "show" output.
 // meta_errno values:
 //  - none
-const char * DLLINTERNAL MPlugin::str_action(STR_ACTION fmt) {
+DLLINTERNAL const char * MPlugin::str_action(STR_ACTION fmt) {
     switch(action) {
         case PA_NULL:
             if(fmt==SA_SHOW) return("NULL");
@@ -1467,7 +1467,7 @@ const char * DLLINTERNAL MPlugin::str_action(STR_ACTION fmt) {
 // NOW is to describe current situation of load/unload attempt.
 // meta_errno values:
 //  - none
-const char * DLLINTERNAL MPlugin::str_loadtime(PLUG_LOADTIME ptime, STR_LOADTIME fmt) {
+DLLINTERNAL const char * MPlugin::str_loadtime(PLUG_LOADTIME ptime, STR_LOADTIME fmt) {
     switch(ptime) {
         case PT_NEVER:
             if(fmt==SL_SHOW) return("Never");
@@ -1501,7 +1501,7 @@ const char * DLLINTERNAL MPlugin::str_loadtime(PLUG_LOADTIME ptime, STR_LOADTIME
 // Return a string describing why a plugin is to be unloaded.
 // meta_errno values:
 //  - none
-const char * DLLINTERNAL MPlugin::str_reason(PL_UNLOAD_REASON preason, PL_UNLOAD_REASON preal_reason) {
+DLLINTERNAL const char * MPlugin::str_reason(PL_UNLOAD_REASON preason, PL_UNLOAD_REASON preal_reason) {
     char buf[128];
 
     if(preason == PNL_PLUGIN)
@@ -1536,7 +1536,7 @@ const char * DLLINTERNAL MPlugin::str_reason(PL_UNLOAD_REASON preason, PL_UNLOAD
 // Return a string describing how the plugin was loaded.
 // meta_errno values:
 //  - none
-const char * DLLINTERNAL MPlugin::str_source(STR_SOURCE fmt) {
+DLLINTERNAL const char * MPlugin::str_source(STR_SOURCE fmt) {
     switch(source) {
         case PS_INI:
             if(fmt==SO_SHOW) return("ini");

@@ -75,8 +75,8 @@ class MConfig : public class_metamod_new {
         option_t *list;
         char *filename;
         // functions
-        option_t * DLLINTERNAL find(const char *lookup);
-        mBOOL DLLINTERNAL set(option_t *setp, const char *value);
+        DLLINTERNAL option_t * find(const char *lookup);
+        DLLINTERNAL mBOOL set(option_t *setp, const char *value);
         // Private; to satisfy -Weffc++ "has pointer data members but does
         // not override" copy/assignment constructor.
         void operator=(const MConfig &src);
@@ -92,10 +92,10 @@ class MConfig : public class_metamod_new {
         int autodetect;     // autodetection of gamedll (Metamod-All-Support patch)
         int clientmeta;     // control 'meta' client-command
         // functions
-        void DLLINTERNAL init(option_t *global_options);
-        mBOOL DLLINTERNAL load(const char *filename);
-        mBOOL DLLINTERNAL set(const char *key, const char *value);
-        void DLLINTERNAL show(void);
+        DLLINTERNAL void init(option_t *global_options);
+        DLLINTERNAL mBOOL load(const char *filename);
+        DLLINTERNAL mBOOL set(const char *key, const char *value);
+        DLLINTERNAL void show(void);
 };
 
 #endif /* CONF_META_H */

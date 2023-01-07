@@ -37,7 +37,7 @@
 
 #include "osdep.h"			// win32 vsnprintf, etc
 
-const char * DLLINTERNAL META_UTIL_VarArgs(const char *format, ...)
+DLLINTERNAL const char * META_UTIL_VarArgs(const char *format, ...)
 {
 	va_list argptr;
 	static char string[4096];
@@ -49,7 +49,7 @@ const char * DLLINTERNAL META_UTIL_VarArgs(const char *format, ...)
 	return(string);
 }
 
-short DLLINTERNAL FixedSigned16(float value, float scale)
+DLLINTERNAL short FixedSigned16(float value, float scale)
 {
 	int output;
 	
@@ -64,7 +64,7 @@ short DLLINTERNAL FixedSigned16(float value, float scale)
 	return((short)output);
 }
 
-unsigned short DLLINTERNAL FixedUnsigned16(float value, float scale)
+DLLINTERNAL unsigned short FixedUnsigned16(float value, float scale)
 {
 	int output;
 	
@@ -78,7 +78,7 @@ unsigned short DLLINTERNAL FixedUnsigned16(float value, float scale)
 }
 
 
-void DLLINTERNAL META_UTIL_HudMessage(edict_t *pEntity, const hudtextparms_t &textparms, const char *pMessage)
+DLLINTERNAL void META_UTIL_HudMessage(edict_t *pEntity, const hudtextparms_t &textparms, const char *pMessage)
 {
 	if(fast_FNullEnt(pEntity) || pEntity->free)
 		return;
@@ -121,5 +121,3 @@ void DLLINTERNAL META_UTIL_HudMessage(edict_t *pEntity, const hudtextparms_t &te
 		}
 	MESSAGE_END();
 }
-
-

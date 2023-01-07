@@ -1,11 +1,10 @@
-include("_initialize_final_target")
-
 add_library("stub_plugin" MODULE)
 
 target_sources("stub_plugin" PRIVATE
     "dllapi.cpp" "engine_api.cpp" "h_export.cpp" "meta_api.cpp" "sdk_util.cpp"
 )
 
+include("_initialize_final_target")
 _initialize_final_target("stub_plugin")
 
 set_target_properties("stub_plugin" PROPERTIES

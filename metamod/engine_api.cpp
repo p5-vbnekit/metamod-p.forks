@@ -451,28 +451,30 @@ static void *mm_GetModelPtr(edict_t *pEdict) {
     RETURN_API(void *)
 }
 
-static int mm_RegUserMsg(const char *pszName, int iSize) {
-    int imsgid;
-    MRegMsg *nmsg=NULL;
-    META_ENGINE_HANDLE(int, 0, FN_REGUSERMSG, pfnRegUserMsg, pi, (pszName, iSize));
+static int mm_RegUserMsg(const char *name, int size) {
+    META_ENGINE_HANDLE(int, 0, FN_REGUSERMSG, pfnRegUserMsg, pi, (name, size));
     // Expand the macro, since we need to do extra work.
     /// RETURN_API(int)
-    imsgid = GET_RET_CLASS(ret_val, int);
+    int const id_ = GET_RET_CLASS(ret_val, int);
 
     // Add the msgid, name, and size to our saved list, if we haven't
     // already.
-    nmsg=RegMsgs->find(imsgid);
-    if(nmsg) {
-        if(FStrEq(pszName, nmsg->name))
+    MRegMsg const * const message_ = RegMsgs->find(id_);
+
+    if (message_) {
+        if (message_->name == name) {
             // This name/msgid pair was already registered.
-            META_DEBUG(3, ("user message registered again: name=%s, msgid=%d", pszName, imsgid));
-        else
+            META_DEBUG(3, ("user message registered again: name=%s, msgid=%d", name, id_));
+        }
+        else {
             // This msgid was previously used by a different message name.
-            META_WARNING("user message id reused: msgid=%d, oldname=%s, newname=%s", imsgid, nmsg->name, pszName);
+            META_WARNING("user message id reused: msgid=%d, oldname=%s, newname=%s", id_, message_->name, name);
+        }
     }
-    else
-        RegMsgs->add(pszName, imsgid, iSize);
-    return(imsgid);
+
+    else RegMsgs->add(id_, size, name);
+
+    return id_;
 }
 
 static void mm_AnimationAutomove(const edict_t *pEdict, float flTime) {

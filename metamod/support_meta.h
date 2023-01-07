@@ -107,24 +107,24 @@ inline int DLLINTERNAL mm_strncmp(const char *s1, const char *s2, size_t n) {
 #endif
 
 // Technique 3: use inline
-inline char * DLLINTERNAL STRNCPY(char *dst, const char *src, int size) {
+inline DLLINTERNAL char * STRNCPY(char *dst, const char *src, int size) {
 	return(strncat(&(*dst = 0), src, size-1));
 }
 
 // Renamed string functions to be clearer.
-inline int DLLINTERNAL strmatch(const char *s1, const char *s2) {
+inline DLLINTERNAL int strmatch(const char *s1, const char *s2) {
 	if(likely(s1) && likely(s2))
 		return(!mm_strcmp(s1, s2));
 	else
 		return(0);
 }
-inline int DLLINTERNAL strnmatch(const char *s1, const char *s2, size_t n) {
+inline DLLINTERNAL int strnmatch(const char *s1, const char *s2, size_t n) {
 	if(likely(s1) && likely(s2))
 		return(!mm_strncmp(s1, s2, n));
 	else
 		return(0);
 }
-inline int DLLINTERNAL strcasematch(const char *s1, const char *s2) {
+inline DLLINTERNAL int strcasematch(const char *s1, const char *s2) {
 	if(likely(s1) && likely(s2))
 		return(!strcasecmp(s1, s2));
 	else
@@ -149,7 +149,7 @@ inline int DLLINTERNAL old_valid_file(char *path) {
 	return(ret);
 }
 int DLLINTERNAL valid_gamedir_file(const char *path);
-char * DLLINTERNAL full_gamedir_path(const char *path, char *fullpath);
+DLLINTERNAL char * full_gamedir_path(const char *path, char *fullpath);
 
 // Turn a variable/function name into the corresponding string, optionally
 // stripping off the leading "len" characters.  Useful for things like

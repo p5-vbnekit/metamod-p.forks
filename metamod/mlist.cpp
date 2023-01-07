@@ -75,7 +75,7 @@ void DLLINTERNAL MPluginList::reset_plugin(MPlugin *pl_find) {
 	pl_find->free_api_pointers();
 	
 	//set zero
-	memset(pl_find, 0, sizeof(*pl_find));
+	memset(static_cast<void *>(pl_find), 0, sizeof(*pl_find));
 	
 	pl_find->index=i+1;		// 1-based
 }
@@ -84,7 +84,7 @@ void DLLINTERNAL MPluginList::reset_plugin(MPlugin *pl_find) {
 // meta_errno values:
 //  - ME_ARGUMENT	invalid pindex
 //  - ME_NOTFOUND	couldn't find a matching plugin
-MPlugin * DLLINTERNAL MPluginList::find(int pindex) {
+DLLINTERNAL MPlugin * MPluginList::find(int pindex) {
 	MPlugin *pfound;
 	if(pindex <= 0)
 		RETURN_ERRNO(NULL, ME_ARGUMENT);
@@ -99,7 +99,7 @@ MPlugin * DLLINTERNAL MPluginList::find(int pindex) {
 // meta_errno values:
 //  - ME_ARGUMENT	invalid pindex
 //  - ME_NOTFOUND	couldn't find a matching plugin
-MPlugin * DLLINTERNAL MPluginList::find(DLHANDLE handle) {
+DLLINTERNAL MPlugin * MPluginList::find(DLHANDLE handle) {
 	int i;
 
 	if(!handle)
@@ -166,7 +166,7 @@ void DLLINTERNAL MPluginList::trim_list(void) {
 // meta_errno values:
 //  - ME_ARGUMENT	null plid_t
 //  - ME_NOTFOUND	couldn't find a matching plugin
-MPlugin * DLLINTERNAL MPluginList::find(plid_t id) {
+DLLINTERNAL MPlugin * MPluginList::find(plid_t id) {
 	int i;
 
 	if(!id)
@@ -184,7 +184,7 @@ MPlugin * DLLINTERNAL MPluginList::find(plid_t id) {
 // meta_errno values:
 //  - ME_ARGUMENT	null path
 //  - ME_NOTFOUND	couldn't find a matching plugin
-MPlugin * DLLINTERNAL MPluginList::find(const char *findpath) {
+DLLINTERNAL MPlugin * MPluginList::find(const char *findpath) {
 	int i;
 
 	if(!findpath)
@@ -208,7 +208,7 @@ MPlugin * DLLINTERNAL MPluginList::find(const char *findpath) {
 //  - ME_ARGUMENT	null memptr
 //  - ME_NOTFOUND	couldn't find a matching plugin
 //  - errno's from DLFNAME()
-MPlugin * DLLINTERNAL MPluginList::find_memloc(void *memptr) {
+DLLINTERNAL MPlugin * MPluginList::find_memloc(void *memptr) {
 #ifdef linux
 	const char *dlfile;
 
@@ -241,7 +241,7 @@ MPlugin * DLLINTERNAL MPluginList::find_memloc(void *memptr) {
 //  - ME_ARGUMENT	null prefix
 //  - ME_NOTFOUND	couldn't find a matching plugin
 //  - ME_NOTUNIQ	found multiple matches; no unique match
-MPlugin * DLLINTERNAL MPluginList::find_match(const char *prefix) {
+DLLINTERNAL MPlugin * MPluginList::find_match(const char *prefix) {
 	int i, len;
 	MPlugin *iplug, *pfound;
 	char buf[NAME_MAX];
@@ -300,7 +300,7 @@ MPlugin * DLLINTERNAL MPluginList::find_match(const char *prefix) {
 // meta_errno values:
 //  - ME_ARGUMENT	null prefix
 //  - ME_NOTFOUND	couldn't find a matching plugin
-MPlugin * DLLINTERNAL MPluginList::find_match(MPlugin *pmatch) {
+DLLINTERNAL MPlugin * MPluginList::find_match(MPlugin *pmatch) {
 	int i;
 	MPlugin *iplug, *pfound;
 	if(!pmatch)
@@ -323,7 +323,7 @@ MPlugin * DLLINTERNAL MPluginList::find_match(MPlugin *pmatch) {
 // Add a plugin to the list.
 // meta_errno values:
 //  - ME_MAXREACHED		reached max plugins
-MPlugin * DLLINTERNAL MPluginList::add(MPlugin *padd) {
+DLLINTERNAL MPlugin * MPluginList::add(MPlugin *padd) {
 	int i;
 	MPlugin *iplug;
 
@@ -464,7 +464,7 @@ mBOOL DLLINTERNAL MPluginList::ini_refresh() {
 		if((cp=strrchr(line, '\n')))
 			*cp='\0';
 		// Parse into a temp plugin
-		memset(&pl_temp, 0, sizeof(pl_temp));
+		memset(static_cast<void *>(&pl_temp), 0, sizeof(pl_temp));
 		if(!pl_temp.ini_parseline(line)) {
 			if(meta_errno==ME_FORMAT)
 				META_WARNING("ini: Skipping malformed line %d of %s", 
@@ -556,7 +556,7 @@ mBOOL DLLINTERNAL MPluginList::ini_refresh() {
 //  - ME_ALREADY	this plugin already loaded
 //  - errno's from add()
 //  - errno's from load()
-MPlugin * DLLINTERNAL MPluginList::plugin_addload(plid_t plid, const char *fname, PLUG_LOADTIME now) {
+DLLINTERNAL MPlugin * MPluginList::plugin_addload(plid_t plid, const char *fname, PLUG_LOADTIME now) {
 	MPlugin pl_temp;
 	MPlugin *pl_found, *pl_added, *pl_loader;
 	
@@ -568,7 +568,7 @@ MPlugin * DLLINTERNAL MPluginList::plugin_addload(plid_t plid, const char *fname
 		RETURN_ERRNO(NULL, ME_BADREQ);
 	}
 	
-	memset(&pl_temp, 0, sizeof(pl_temp));
+	memset(static_cast<void *>(&pl_temp), 0, sizeof(pl_temp));
 	
 	// copy filename
 	if(!pl_temp.plugin_parseline(fname, pl_loader->index)) {
@@ -632,7 +632,7 @@ mBOOL DLLINTERNAL MPluginList::cmd_addload(const char *args) {
 	MPlugin pl_temp;
 	MPlugin *pl_found, *pl_added;
 	
-	memset(&pl_temp, 0, sizeof(pl_temp));
+	memset(static_cast<void *>(&pl_temp), 0, sizeof(pl_temp));
 	
 	// XXX move back to comands_meta ?
 

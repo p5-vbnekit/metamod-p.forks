@@ -113,7 +113,7 @@ class EngineInfo : public class_metamod_new
         EngineInfo& operator=( const EngineInfo& ) DLLINTERNAL;
         EngineInfo( const EngineInfo& ) DLLINTERNAL;
 
-        const char* DLLINTERNAL type( void );
+        DLLINTERNAL char const * type( void );
         
         // Initilaise object, determining the bounds of the code segment of
         // the HL engine shared object.

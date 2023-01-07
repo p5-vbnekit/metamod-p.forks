@@ -37,9 +37,9 @@
 #ifndef OSDEP_H
 #define OSDEP_H
 
-#include <string.h>			// strerror()
-#include <ctype.h>			// isupper, tolower
-#include <errno.h>			// errno
+#include <cctype>			// isupper, tolower
+#include <cerrno>			// errno
+#include <cstring>			// strerror()
 
 // Various differences between WIN32 and Linux.
 
@@ -95,7 +95,7 @@
 //
 // AFAIK, this is os-independent, but it's included here in osdep.h where
 // DLLEXPORT is defined, for convenience.
-#define C_DLLEXPORT		extern "C" DLLEXPORT
+#define C_DLLEXPORT extern "C" DLLEXPORT
 
 // Special version that fixes vsnprintf bugs.
 #ifndef DO_NOT_FIX_VARARG_ENGINE_API_WARPERS
@@ -106,19 +106,19 @@ void DLLINTERNAL safevoid_vsnprintf(char* s, size_t n, const char *format, va_li
 void DLLINTERNAL safevoid_snprintf(char* s, size_t n, const char* format, ...);
 
 // Functions & types for DLL open/close/etc operations.
+typedef void * DLFUNC;
 extern mBOOL dlclose_handle_invalid DLLHIDDEN;
 #ifdef linux
 	#include <dlfcn.h>
-	typedef void* DLHANDLE;
-	typedef void* DLFUNC;
-	inline DLHANDLE DLLINTERNAL DLOPEN(const char *filename) {
+	typedef void * DLHANDLE;
+	inline DLLINTERNAL DLHANDLE DLOPEN(const char *filename) {
 		return(dlopen(filename, RTLD_NOW));
 	}
-	inline DLFUNC DLLINTERNAL DLSYM(DLHANDLE handle, const char *string) {
+	inline DLLINTERNAL DLFUNC DLSYM(DLHANDLE handle, const char *string) {
 		return(dlsym(handle, string));
 	}
 	//dlclose crashes if handle is null.
-	inline int DLLINTERNAL DLCLOSE(DLHANDLE handle) {
+	inline DLLINTERNAL int DLCLOSE(DLHANDLE handle) {
 		if(!handle) {
 			dlclose_handle_invalid = mTRUE;
 			return(1);
@@ -127,60 +127,58 @@ extern mBOOL dlclose_handle_invalid DLLHIDDEN;
 		dlclose_handle_invalid = mFALSE;
 		return(dlclose(handle));
 	}
-	inline const char * DLLINTERNAL DLERROR(void) {
+	inline DLLINTERNAL const char * DLERROR(void) {
 		if(dlclose_handle_invalid)
 			return("Invalid handle.");
 		return(dlerror());
 	}
 #elif defined(_WIN32)
 	typedef HINSTANCE DLHANDLE;
-	typedef FARPROC DLFUNC;
 	inline DLHANDLE DLLINTERNAL DLOPEN(const char *filename) {
-		return(LoadLibraryA(filename));
+		return ::LoadLibraryA(filename);
 	}
 	inline DLFUNC DLLINTERNAL DLSYM(DLHANDLE handle, const char *string) {
-		return(GetProcAddress(handle, string));
+		return reinterpret_cast<DLFUNC>(::GetProcAddress(handle, string));
 	}
 	inline int DLLINTERNAL DLCLOSE(DLHANDLE handle) {
-		if(!handle) {
+		if (! handle) {
 			dlclose_handle_invalid = mTRUE;
-			return(1);
+			return 1;
 		}
 		
 		dlclose_handle_invalid = mFALSE;
 		
 		// NOTE: Windows FreeLibrary returns success=nonzero, fail=zero,
 		// which is the opposite of the unix convention, thus the '!'.
-		return(!FreeLibrary(handle));
+		return ! ::FreeLibrary(handle);
 	}
 	// Windows doesn't provide a function corresponding to dlerror(), so
 	// we make our own.
 	char * DLLINTERNAL str_GetLastError(void);
 	inline const char * DLLINTERNAL DLERROR(void) {
-		if(dlclose_handle_invalid)
-			return("Invalid handle.");
-		return(str_GetLastError());
+		if (dlclose_handle_invalid) return "Invalid handle.";
+		return str_GetLastError();
 	}
 #endif /* _WIN32 */
-const char * DLLINTERNAL DLFNAME(void *memptr);
-mBOOL DLLINTERNAL IS_VALID_PTR(void *memptr);
+DLLINTERNAL const char * DLFNAME(void *memptr);
+DLLINTERNAL mBOOL IS_VALID_PTR(void *memptr);
 
 
 // Attempt to call the given function pointer, without segfaulting.
-mBOOL DLLINTERNAL os_safe_call(REG_CMD_FN pfn);
+DLLINTERNAL mBOOL os_safe_call(REG_CMD_FN pfn);
 
 
 // Windows doesn't have an strtok_r() routine, so we write our own.
 #ifdef _WIN32
 	#define strtok_r(s, delim, ptrptr)	my_strtok_r(s, delim, ptrptr)
-	char * DLLINTERNAL my_strtok_r(char *s, const char *delim, char **ptrptr);
+	DLLINTERNAL char * my_strtok_r(char *s, const char *delim, char **ptrptr);
 #endif /* _WIN32 */
 
 
 // Linux doesn't have an strlwr() routine, so we write our own.
 #ifdef linux
 	#define strlwr(s) my_strlwr(s)
-	char * DLLINTERNAL my_strlwr(char *s);
+	DLLINTERNAL char * my_strlwr(char *s);
 #endif /* _WIN32 */
 
 
@@ -290,18 +288,17 @@ inline mBOOL DLLINTERNAL is_absolute_path(const char *path) {
 #ifdef _WIN32
 // Buffer pointed to by resolved_name is assumed to be able to store a
 // string of PATH_MAX length.
-char * DLLINTERNAL realpath(const char *file_name, char *resolved_name);
+DLLINTERNAL char * realpath(const char *file_name, char *resolved_name);
 #endif /* _WIN32 */
 
 // Generic "error string" from a recent OS call.  For linux, this is based
 // on errno.  For win32, it's based on GetLastError.
-inline const char * DLLINTERNAL str_os_error(void) {
+inline DLLINTERNAL const char * str_os_error(void) {
 #ifdef linux
 	return(strerror(errno));
 #elif defined(_WIN32)
 	return(str_GetLastError());
 #endif /* _WIN32 */
 }
-
 
 #endif /* OSDEP_H */

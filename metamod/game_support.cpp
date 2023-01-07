@@ -68,7 +68,7 @@ game_modlist_t const known_games = {
 };
 
 // Find a modinfo corresponding to the given game name.
-game_modinfo_t const * DLLINTERNAL lookup_game(char const *name) {
+DLLINTERNAL game_modinfo_t const * lookup_game(char const *name) {
     for(int i = 0; known_games[i].name; i++) {
         game_modinfo_t const * const imod = &known_games[i];
         // If there are 2 or more same names check next dll file if doesn't exist

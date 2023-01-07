@@ -84,7 +84,7 @@ char * DLLINTERNAL my_strtok_r(char *s, const char *delim, char **ptrptr) {
 
 
 #ifdef linux
-char * DLLINTERNAL my_strlwr(char *s) {
+DLLINTERNAL char * my_strlwr(char *s) {
 	char *c;
 	if(!s)
 		return(0);
@@ -250,7 +250,7 @@ char * DLLINTERNAL str_GetLastError(void) {
 #ifdef linux
 // Errno values:
 //  - ME_NOTFOUND	couldn't find a sharedlib that contains memory location
-const char * DLLINTERNAL DLFNAME(void *memptr) {
+DLLINTERNAL const char * DLFNAME(void *memptr) {
 	Dl_info dli;
 	memset(&dli, 0, sizeof(dli));
 	if(dladdr(memptr, &dli))
@@ -280,7 +280,7 @@ const char * DLLINTERNAL DLFNAME(void *memptr) {
 //
 // Errno values:
 //  - ME_NOTFOUND	couldn't find a DLL that contains memory location
-const char * DLLINTERNAL DLFNAME(void *memptr) {
+DLLINTERNAL const char * DLFNAME(void *memptr) {
 	MEMORY_BASIC_INFORMATION MBI;
 	static char fname[PATH_MAX];
 
@@ -315,7 +315,7 @@ const char * DLLINTERNAL DLFNAME(void *memptr) {
 //      non-case-sensitive.
 //  - For linux, this requires no work, as paths uses slashes (/) natively,
 //    and pathnames are case-sensitive.
-void DLLINTERNAL normalize_pathname(char *path) {
+DLLINTERNAL void normalize_pathname(char *path) {
 	char *cp;
 
 	META_DEBUG(8, ("normalize: %s", path));
@@ -331,7 +331,7 @@ void DLLINTERNAL normalize_pathname(char *path) {
 
 // Buffer pointed to by resolved_name is assumed to be able to store a
 // string of PATH_MAX length.
-char * DLLINTERNAL realpath(const char *file_name, char *resolved_name) {
+DLLINTERNAL char * realpath(const char *file_name, char *resolved_name) {
 	int ret;
 	ret=GetFullPathNameA(file_name, PATH_MAX, resolved_name, NULL);
 	if(ret > PATH_MAX) {
@@ -365,7 +365,7 @@ char * DLLINTERNAL realpath(const char *file_name, char *resolved_name) {
 // we need it for in this particular situation.
 // meta_errno values:
 //  - ME_NOTFOUND	couldn't find a matching sharedlib for this ptr
-mBOOL DLLINTERNAL IS_VALID_PTR(void *memptr) {
+DLLINTERNAL mBOOL IS_VALID_PTR(void *memptr) {
 	Dl_info dli;
 	memset(&dli, 0, sizeof(dli));
 	if(dladdr(memptr, &dli))
@@ -377,7 +377,7 @@ mBOOL DLLINTERNAL IS_VALID_PTR(void *memptr) {
 // Use the native windows routine IsBadCodePtr.
 // meta_errno values:
 //  - ME_BADMEMPTR	not a valid memory pointer
-mBOOL DLLINTERNAL IS_VALID_PTR(void *memptr) {
+DLLINTERNAL mBOOL IS_VALID_PTR(void *memptr) {
 	if(IsBadCodePtr((FARPROC) memptr))
 		RETURN_ERRNO(mFALSE, ME_BADMEMPTR);
 	else
@@ -390,7 +390,7 @@ mBOOL DLLINTERNAL IS_VALID_PTR(void *memptr) {
 // in plugin commands and produced confusing output ("plugin has been
 // unloaded", when really it segfaultd), and (b) wasn't necessary since
 // IS_VALID_PTR() should cover the situation.
-mBOOL DLLINTERNAL os_safe_call(REG_CMD_FN pfn) {
+DLLINTERNAL mBOOL os_safe_call(REG_CMD_FN pfn) {
 	// try and see if this is a valid memory location
 	if(!IS_VALID_PTR((void *) pfn))
 		// meta_errno should be already set in is_valid_ptr()

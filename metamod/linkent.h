@@ -95,7 +95,7 @@ typedef void (*ENTITY_FN) (entvars_t *);
 				return; \
 			} \
 			META_DEBUG(9, ("Looking up plugin entity '%s'", entStr)); \
-			pfnEntity = (ENTITY_FN) DLSYM(findp->handle, entStr); \
+			pfnEntity = (ENTITY_FN) reinterpret_cast<void *>(DLSYM(findp->handle, entStr)); \
 		} \
 		if(!pfnEntity) { \
 			META_WARNING("Couldn't find plugin entity '%s' in plugin DLL '%s'", entStr, findp->file); \

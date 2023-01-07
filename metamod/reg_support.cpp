@@ -42,13 +42,13 @@
 #  endif
 #endif /* linux */
 
-#include <string.h>			// strsignal, etc
+#include <cstring>			// strsignal, etc
 
 #include <extdll.h>			// always
 #include "sdk_util.h"		// REG_SVR_COMMAND, etc
 
 #include "reg_support.h"	// me
-#include "metamod.h"            // RegCmds, g_Players, etc
+#include "metamod.h"		// RegCmds, g_Players, etc
 #include "log_meta.h"		// META_ERROR, etc
 
 // "Register" support.
@@ -93,23 +93,22 @@
 // calls made by the plugin.  It finds the appropriate plugin function
 // pointer to call based on CMD_ARGV(0).
 void DLLHIDDEN meta_command_handler(void) {
-	MRegCmd *icmd;
-	const char *cmd;
-
 	META_DEBUG(5, ("called: meta_command_handler; arg0=%s args='%s'", CMD_ARGV(0), CMD_ARGS()));
-	cmd=CMD_ARGV(0);
-	if(!cmd) {
+	char const * const name_ = CMD_ARGV(0);
+
+	if (! name_) {
 		META_WARNING("Null command name in meta_command_handler() ??");
 		return;
 	}
 
-	icmd=RegCmds->find(cmd);
-	if(!icmd) {
-		META_WARNING("Couldn't find registered plugin command: %s", cmd);
+	MRegCmd * const registered_ = RegCmds->find(name_);
+
+	if (! registered_) {
+		META_WARNING("Couldn't find registered plugin command: %s", name_);
 		return;
 	}
-	if(icmd->call() != mTRUE)
-		META_CONS("[metamod: command '%s' unavailable; plugin unloaded]", cmd);
+
+	if (mTRUE != registered_->call()) META_CONS("[metamod: command '%s' unavailable; plugin unloaded]", name_);
 }
 
 
@@ -145,17 +144,17 @@ void DLLHIDDEN meta_AddServerCommand(char *cmd_name, void (*function) (void)) {
 			return;
 		}
 		// Only register if not previously registered..
-		REG_SVR_COMMAND(icmd->name, meta_command_handler);
+		REG_SVR_COMMAND(const_cast<char *>(icmd->name.c_str()), meta_command_handler);
 	}
 
-	icmd->pfnCmd=function;
+	icmd->handler=function;
 	icmd->status=RG_VALID;
 	// Store which plugin this is for, if we know.  We can use '0' for
 	// unknown plugin, since plugin index starts at 1.
 	if(iplug)
-		icmd->plugid = iplug->index;
+		icmd->plugin_id = iplug->index;
 	else
-		icmd->plugid = 0;
+		icmd->plugin_id = 0;
 }
 
 
@@ -171,46 +170,44 @@ void DLLHIDDEN meta_AddServerCommand(char *cmd_name, void (*function) (void)) {
 // values via the engine functions, this will work fine.  If the plugin
 // code tries to _directly_ read/set the fields of its own cvar structures,
 // it will fail to work properly.
-void DLLHIDDEN meta_CVarRegister(cvar_t *pCvar) {
-	MPlugin *iplug=NULL;
-	MRegCvar *icvar=NULL;
+void DLLHIDDEN meta_CVarRegister(cvar_t *variable) {
+	META_DEBUG(4, ("called: meta_CVarRegister; name=%s", variable->name));
 
-	META_DEBUG(4, ("called: meta_CVarRegister; name=%s", pCvar->name));
+	MPlugin const * const plugin_ = Plugins->find_memloc(static_cast<void *>(variable));
 
 	// try to find which plugin is registering this cvar
-	if(!(iplug=Plugins->find_memloc((void *)pCvar))) {
+	if(! plugin_) {
 		// if this isn't supported on this OS, don't log an error
-		if(meta_errno != ME_OSNOTSUP)
+		if(ME_OSNOTSUP != meta_errno) {
 			// Note: if cvar_t was malloc'd by the plugin, we can't
 			// determine the calling plugin.  Thus, this becomes a Debug
 			// rather than Error message.
-			META_DEBUG(1, ("Failed to find memloc for regcvar '%s'", 
-						pCvar->name));
+			META_DEBUG(1, ("Failed to find memloc for regcvar '%s'", variable->name));
+		}
 	}
 
 	// See if this cvar was previously registered, ie a "reloaded" plugin.
-	icvar=RegCvars->find(pCvar->name);
-	if(!icvar) {
+	MRegCvar *registered_ = RegCvars->find(variable->name);
+	if (! registered_) {
 		// If not found, add.
-		icvar=RegCvars->add(pCvar->name);
-		if(!icvar) {
+		registered_ = RegCvars->add(variable->name);
+		if (! registered_) {
 			// error details logged in add()
 			return;
 		}
 		// Reset to given value
-		icvar->set(pCvar);
-		CVAR_REGISTER(icvar->data);
+		registered_->set(variable);
+		CVAR_REGISTER(&registered_->data);
 	}
 	// Note: if not a new cvar, then we don't set the values, and just keep
 	// the pre-existing value.
 
-	icvar->status=RG_VALID;
+	registered_->status = RG_VALID;
+
 	// Store which plugin this is for, if we know.  Use '0' for unknown
 	// plugin, as plugin index starts at 1.
-	if(iplug)
-		icvar->plugid = iplug->index;
-	else
-		icvar->plugid = 0;
+	if (plugin_) registered_->plugin_id = plugin_->index;
+	else registered_->plugin_id = 0;
 }
 
 

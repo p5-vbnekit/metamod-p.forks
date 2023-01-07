@@ -1,5 +1,3 @@
-include("_initialize_final_target")
-
 unset("_compile_time" CACHE)
 unset("_compile_date" CACHE)
 
@@ -19,6 +17,7 @@ target_sources("metamod" PRIVATE
     "res_meta.rc"
 )
 
+include("_initialize_final_target")
 _initialize_final_target("metamod")
 
 set_target_properties("metamod" PROPERTIES
@@ -49,4 +48,19 @@ if(WIN32)
 elseif(UNIX)
     target_link_libraries("metamod" PRIVATE "dl")
     target_sources("metamod" PRIVATE "osdep_linkent_linux.cpp" "osdep_detect_gamedll_linux.cpp")
+endif()
+
+if(WIN32)
+    unset("_platform.windres_sz_definition" CACHE)
+    get_property("_platform.windres_sz_definition" DIRECTORY "${CMAKE_SOURCE_DIR}" PROPERTY "_inspect_platform.windres_sz_definition")
+    mark_as_advanced("_platform.windres_sz_definition")
+    if(NOT "${_platform.windres_sz_definition}")
+        message(WARNING
+            "quotes in definitions aren't re-escaped properly by `windres` when passing definitions to preprocessor\n"
+            "check this bug here: https://sourceware.org/bugzilla/show_bug.cgi?id=27843\n"
+            "work around this: redefining `OPT_TYPE` (ugly and dirty hack)"
+        )
+        set_property(SOURCE "res_meta.rc" APPEND PROPERTY COMPILE_DEFINITIONS "$<$<CONFIG:Debug>:OPT_TYPE=\\\"debug\\\">")
+        set_property(SOURCE "res_meta.rc" APPEND PROPERTY COMPILE_DEFINITIONS "$<$<CONFIG:Release>:OPT_TYPE=\\\"optimized+meta_debug-disabled\\\">")
+    endif()
 endif()

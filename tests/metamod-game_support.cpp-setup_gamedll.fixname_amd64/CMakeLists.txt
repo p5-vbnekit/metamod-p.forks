@@ -17,7 +17,7 @@ set_property(TARGET "${_name}" PROPERTY "INTERPROCEDURAL_OPTIMIZATION")
 
 if(CMAKE_CROSSCOMPILING)
     if(":${CMAKE_CROSSCOMPILING_EMULATOR}:" STREQUAL "::")
-        message(WARNING "`metamod.tests.hlsdk.engine.archtypes` test disabled because `CMAKE_CROSSCOMPILING` enabled but `CMAKE_CROSSCOMPILING_EMULATOR` not specified")
+        message(WARNING "`${_name}` test disabled because `CMAKE_CROSSCOMPILING` enabled but `CMAKE_CROSSCOMPILING_EMULATOR` not specified")
     else()
         list(APPEND "_command" "${CMAKE_CROSSCOMPILING_EMULATOR}")
         list(APPEND "_command" "$<TARGET_FILE:${_name}>")
