@@ -50,7 +50,6 @@
 #include "game_support.h"       // lookup_game, etc
 #include "commands_meta.h"      // meta_register_cmdcvar, etc
 #include "enginecallbacks.h"    // GET_GAME_DIR, etc
-#include "thread_logparse.h"    // logparse_handle, etc
 #include "support_meta.h"       // valid_gamedir_file, etc
 #include "log_meta.h"           // META_LOG, etc
 #include "types_meta.h"         // mBOOL
