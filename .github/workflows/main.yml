@@ -74,7 +74,7 @@ jobs:
           system: ${{ matrix.system }}
           architecture: ${{ matrix.architecture }}
           mingw_threads: ${{ matrix.mingw_threads }}
-          compiler_flags: "-Wall -Weffc++ -Wextra -Wpedantic"
+          compiler_flags: "-Werror -Wall -Weffc++ -Wextra -Wpedantic"
           wine_runtime_path: ${{ matrix.wine_runtime_path }}
           build_directory_path: build
           source_directory_path: src
