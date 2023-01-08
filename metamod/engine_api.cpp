@@ -34,10 +34,10 @@
  *
  */
 
-#include <stddef.h>             // offsetof
-#include <stdio.h>              // vsnprintf, etc
-#include <stdarg.h>             // va_start, etc
-#include <malloc.h>             // alloca, etc
+#include <cstdio>               // vsnprintf, etc
+#include <cstddef>              // offsetof
+#include <cstdarg>              // va_start, etc
+#include <cstdlib>              // ::std::malloc, etc
 
 #include <extdll.h>             // always
 
@@ -69,13 +69,12 @@
         char strbuf[MAX_STRBUF_LEN]; \
         char *buf = strbuf; \
         { \
-            int len; \
             va_list vargs; \
             va_start(vargs, szFmt); \
-            len = safe_vsnprintf(strbuf, sizeof(strbuf), szFmt, vargs); \
+            int len = safe_vsnprintf(strbuf, sizeof(strbuf), szFmt, vargs); \
             va_end(vargs); \
             if ((unsigned)len >= sizeof(strbuf)) { \
-                buf = (char *)malloc(len + 1); \
+                buf = reinterpret_cast<char *>(::std::malloc(len + 1)); \
                 if (buf) { \
                     va_start(vargs, szFmt); \
                     safevoid_vsnprintf(buf, len + 1, szFmt, vargs); \
@@ -86,7 +85,7 @@
             } \
         }
     #define CLEAN_FORMATED_STRING() \
-        if (buf != strbuf) free(buf);
+        if (buf != strbuf) ::std::free(buf);
 #else
     #define MAKE_FORMATED_STRING(szFmt) \
         char buf[MAX_STRBUF_LEN]; \
@@ -114,7 +113,7 @@
     API_START_TSC_TRACKING(); \
     META_DEBUG(engine_info.pfnName.loglevel, ("In %s: fmt=%s", engine_info.pfnName.name, fmt_arg)); \
     API_PACK_ARGS(pack_args_type, (pfn_arg, "%s", buf)); \
-    class_ret_t ret_val(main_hook_function(class_ret_t((ret_t)ret_init), offsetof(engine_info_t, pfnName), e_api_engine, offsetof(enginefuncs_t, pfnName), &packed_args)); \
+    class_ret_t ret_val(main_hook_function(class_ret_t(static_cast< ret_t >(ret_init)), offsetof(engine_info_t, pfnName), e_api_engine, offsetof(enginefuncs_t, pfnName), &packed_args)); \
     API_END_TSC_TRACKING() \
     CLEAN_FORMATED_STRING()
 
@@ -127,11 +126,11 @@ static int mm_PrecacheSound(char *s) {
     META_ENGINE_HANDLE(int, 0, FN_PRECACHESOUND, pfnPrecacheSound, p, (s));
     RETURN_API(int)
 }
-static void mm_SetModel(edict_t *e, const char *m) {
+static void mm_SetModel(edict_t *e, char const *m) {
     META_ENGINE_HANDLE_void(FN_SETMODEL, pfnSetModel, 2p, (e, m));
     RETURN_API_void()
 }
-static int mm_ModelIndex(const char *m) {
+static int mm_ModelIndex(char const *m) {
     META_ENGINE_HANDLE(int, 0, FN_MODELINDEX, pfnModelIndex, p, (m));
     RETURN_API(int)
 }
@@ -140,7 +139,7 @@ static int mm_ModelFrames(int modelIndex) {
     RETURN_API(int)
 }
 
-static void mm_SetSize(edict_t *e, const float *rgflMin, const float *rgflMax) {
+static void mm_SetSize(edict_t *e, float const *rgflMin, float const *rgflMax) {
     META_ENGINE_HANDLE_void(FN_SETSIZE, pfnSetSize, 3p, (e, rgflMin, rgflMax));
     RETURN_API_void()
 }
@@ -157,15 +156,15 @@ static void mm_SaveSpawnParms(edict_t *ent) {
     RETURN_API_void()
 }
 
-static float mm_VecToYaw(const float *rgflVector) {
+static float mm_VecToYaw(float const *rgflVector) {
     META_ENGINE_HANDLE(float, 0.0, FN_VECTOYAW, pfnVecToYaw, p, (rgflVector));
     RETURN_API(float)
 }
-static void mm_VecToAngles(const float *rgflVectorIn, float *rgflVectorOut) {
+static void mm_VecToAngles(float const *rgflVectorIn, float *rgflVectorOut) {
     META_ENGINE_HANDLE_void(FN_VECTOANGLES, pfnVecToAngles, 2p, (rgflVectorIn, rgflVectorOut));
     RETURN_API_void()
 }
-static void mm_MoveToOrigin(edict_t *ent, const float *pflGoal, float dist, int iMoveType) {
+static void mm_MoveToOrigin(edict_t *ent, float const *pflGoal, float dist, int iMoveType) {
     META_ENGINE_HANDLE_void(FN_MOVETOORIGIN, pfnMoveToOrigin, 2pfi, (ent, pflGoal, dist, iMoveType));
     RETURN_API_void()
 }
@@ -178,7 +177,7 @@ static void mm_ChangePitch(edict_t *ent) {
     RETURN_API_void()
 }
 
-static edict_t * mm_FindEntityByString(edict_t *pEdictStartSearchAfter, const char *pszField, const char *pszValue) {
+static edict_t * mm_FindEntityByString(edict_t *pEdictStartSearchAfter, char const *pszField, char const *pszValue) {
     META_ENGINE_HANDLE(edict_t *, NULL, FN_FINDENTITYBYSTRING, pfnFindEntityByString, 3p, (pEdictStartSearchAfter, pszField, pszValue));
     RETURN_API(edict_t *)
 }
@@ -186,7 +185,7 @@ static int mm_GetEntityIllum(edict_t *pEnt) {
     META_ENGINE_HANDLE(int, 0, FN_GETENTITYILLUM, pfnGetEntityIllum, p, (pEnt));
     RETURN_API(int)
 }
-static edict_t * mm_FindEntityInSphere(edict_t *pEdictStartSearchAfter, const float *org, float rad) {
+static edict_t * mm_FindEntityInSphere(edict_t *pEdictStartSearchAfter, float const *org, float rad) {
     META_ENGINE_HANDLE(edict_t *, NULL, FN_FINDENTITYINSPHERE, pfnFindEntityInSphere, 2pf, (pEdictStartSearchAfter, org, rad));
     RETURN_API(edict_t *)
 }
@@ -199,16 +198,16 @@ static edict_t * mm_EntitiesInPVS(edict_t *pplayer) {
     RETURN_API(edict_t *)
 }
 
-static void mm_MakeVectors(const float *rgflVector) {
+static void mm_MakeVectors(float const *rgflVector) {
     META_ENGINE_HANDLE_void(FN_MAKEVECTORS, pfnMakeVectors, p, (rgflVector));
     RETURN_API_void()
 }
-static void mm_AngleVectors(const float *rgflVector, float *forward, float *right, float *up) {
+static void mm_AngleVectors(float const *rgflVector, float *forward, float *right, float *up) {
     META_ENGINE_HANDLE_void(FN_ANGLEVECTORS, pfnAngleVectors, 4p, (rgflVector, forward, right, up));
     RETURN_API_void()
 }
 
-static edict_t * mm_CreateEntity(void) {
+static edict_t * mm_CreateEntity() {
     META_ENGINE_HANDLE(edict_t *, NULL, FN_CREATEENTITY, pfnCreateEntity, void, (VOID_ARG));
     RETURN_API(edict_t *)
 }
@@ -238,21 +237,21 @@ static int mm_WalkMove(edict_t *ent, float yaw, float dist, int iMode) {
     META_ENGINE_HANDLE(int, 0, FN_WALKMOVE, pfnWalkMove, p2fi, (ent, yaw, dist, iMode));
     RETURN_API(int)
 }
-static void mm_SetOrigin(edict_t *e, const float *rgflOrigin) {
+static void mm_SetOrigin(edict_t *e, float const *rgflOrigin) {
     META_ENGINE_HANDLE_void(FN_SETORIGIN, pfnSetOrigin, 2p, (e, rgflOrigin));
     RETURN_API_void()
 }
 
-static void mm_EmitSound(edict_t *entity, int channel, const char *sample, float volume, float attenuation, int fFlags, int pitch) {
+static void mm_EmitSound(edict_t *entity, int channel, char const *sample, float volume, float attenuation, int fFlags, int pitch) {
     META_ENGINE_HANDLE_void(FN_EMITSOUND, pfnEmitSound, pip2f2i, (entity, channel, sample, volume, attenuation, fFlags, pitch));
     RETURN_API_void()
 }
-static void mm_EmitAmbientSound(edict_t *entity, float *pos, const char *samp, float vol, float attenuation, int fFlags, int pitch) {
+static void mm_EmitAmbientSound(edict_t *entity, float *pos, char const *samp, float vol, float attenuation, int fFlags, int pitch) {
     META_ENGINE_HANDLE_void(FN_EMITAMBIENTSOUND, pfnEmitAmbientSound, 3p2f2i, (entity, pos, samp, vol, attenuation, fFlags, pitch));
     RETURN_API_void()
 }
 
-static void mm_TraceLine(const float *v1, const float *v2, int fNoMonsters, edict_t *pentToSkip, TraceResult *ptr) {
+static void mm_TraceLine(float const *v1, float const *v2, int fNoMonsters, edict_t *pentToSkip, TraceResult *ptr) {
     META_ENGINE_HANDLE_void(FN_TRACELINE, pfnTraceLine, 2pi2p, (v1, v2, fNoMonsters, pentToSkip, ptr));
     RETURN_API_void()
 }
@@ -260,23 +259,23 @@ static void mm_TraceToss(edict_t *pent, edict_t *pentToIgnore, TraceResult *ptr)
     META_ENGINE_HANDLE_void(FN_TRACETOSS, pfnTraceToss, 3p, (pent, pentToIgnore, ptr));
     RETURN_API_void()
 }
-static int mm_TraceMonsterHull(edict_t *pEdict, const float *v1, const float *v2, int fNoMonsters, edict_t *pentToSkip, TraceResult *ptr) {
+static int mm_TraceMonsterHull(edict_t *pEdict, float const *v1, float const *v2, int fNoMonsters, edict_t *pentToSkip, TraceResult *ptr) {
     META_ENGINE_HANDLE(int, 0, FN_TRACEMONSTERHULL, pfnTraceMonsterHull, 3pi2p, (pEdict, v1, v2, fNoMonsters, pentToSkip, ptr));
     RETURN_API(int)
 }
-static void mm_TraceHull(const float *v1, const float *v2, int fNoMonsters, int hullNumber, edict_t *pentToSkip, TraceResult *ptr) {
+static void mm_TraceHull(float const *v1, float const *v2, int fNoMonsters, int hullNumber, edict_t *pentToSkip, TraceResult *ptr) {
     META_ENGINE_HANDLE_void(FN_TRACEHULL, pfnTraceHull, 2p2i2p, (v1, v2, fNoMonsters, hullNumber, pentToSkip, ptr));
     RETURN_API_void()
 }
-static void mm_TraceModel(const float *v1, const float *v2, int hullNumber, edict_t *pent, TraceResult *ptr) {
+static void mm_TraceModel(float const *v1, float const *v2, int hullNumber, edict_t *pent, TraceResult *ptr) {
     META_ENGINE_HANDLE_void(FN_TRACEMODEL, pfnTraceModel, 2pi2p, (v1, v2, hullNumber, pent, ptr));
     RETURN_API_void()
 }
-static const char * mm_TraceTexture(edict_t *pTextureEntity, const float *v1, const float *v2) {
-    META_ENGINE_HANDLE(const char *, NULL, FN_TRACETEXTURE, pfnTraceTexture, 3p, (pTextureEntity, v1, v2));
-    RETURN_API(const char *)
+static char const * mm_TraceTexture(edict_t *pTextureEntity, float const *v1, float const *v2) {
+    META_ENGINE_HANDLE(char const *, NULL, FN_TRACETEXTURE, pfnTraceTexture, 3p, (pTextureEntity, v1, v2));
+    RETURN_API(char const *)
 }
-static void mm_TraceSphere(const float *v1, const float *v2, int fNoMonsters, float radius, edict_t *pentToSkip, TraceResult *ptr) {
+static void mm_TraceSphere(float const *v1, float const *v2, int fNoMonsters, float radius, edict_t *pentToSkip, TraceResult *ptr) {
     META_ENGINE_HANDLE_void(FN_TRACESPHERE, pfnTraceSphere, 2pif2p, (v1, v2, fNoMonsters, radius, pentToSkip, ptr));
     RETURN_API_void()
 }
@@ -289,7 +288,7 @@ static void mm_ServerCommand(char *str) {
     META_ENGINE_HANDLE_void(FN_SERVERCOMMAND, pfnServerCommand, p, (str));
     RETURN_API_void()
 }
-static void mm_ServerExecute(void) {
+static void mm_ServerExecute() {
     META_ENGINE_HANDLE_void(FN_SERVEREXECUTE, pfnServerExecute, void, (VOID_ARG));
     RETURN_API_void()
 }
@@ -298,7 +297,7 @@ static void mm_engClientCommand(edict_t *pEdict, char *szFmt, ...) {
     RETURN_API_void()
 }
 
-static void mm_ParticleEffect(const float *org, const float *dir, float color, float count) {
+static void mm_ParticleEffect(float const *org, float const *dir, float color, float count) {
     META_ENGINE_HANDLE_void(FN_PARTICLEEFFECT, pfnParticleEffect, 2p2f, (org, dir, color, count));
     RETURN_API_void()
 }
@@ -306,20 +305,20 @@ static void mm_LightStyle(int style, char *val) {
     META_ENGINE_HANDLE_void(FN_LIGHTSTYLE, pfnLightStyle, ip, (style, val));
     RETURN_API_void()
 }
-static int mm_DecalIndex(const char *name) {
+static int mm_DecalIndex(char const *name) {
     META_ENGINE_HANDLE(int, 0, FN_DECALINDEX, pfnDecalIndex, p, (name));
     RETURN_API(int)
 }
-static int mm_PointContents(const float *rgflVector) {
+static int mm_PointContents(float const *rgflVector) {
     META_ENGINE_HANDLE(int, 0, FN_POINTCONTENTS, pfnPointContents, p, (rgflVector));
     RETURN_API(int)
 }
 
-static void mm_MessageBegin(int msg_dest, int msg_type, const float *pOrigin, edict_t *ed) {
+static void mm_MessageBegin(int msg_dest, int msg_type, float const *pOrigin, edict_t *ed) {
     META_ENGINE_HANDLE_void(FN_MESSAGEBEGIN, pfnMessageBegin, 2i2p, (msg_dest, msg_type, pOrigin, ed));
     RETURN_API_void()
 }
-static void mm_MessageEnd(void) {
+static void mm_MessageEnd() {
     META_ENGINE_HANDLE_void(FN_MESSAGEEND, pfnMessageEnd, void, (VOID_ARG));
     RETURN_API_void()
 }
@@ -348,7 +347,7 @@ static void mm_WriteCoord(float flValue) {
     META_ENGINE_HANDLE_void(FN_WRITECOORD, pfnWriteCoord, f, (flValue));
     RETURN_API_void()
 }
-static void mm_WriteString(const char *sz) {
+static void mm_WriteString(char const *sz) {
     META_ENGINE_HANDLE_void(FN_WRITESTRING, pfnWriteString, p, (sz));
     RETURN_API_void()
 }
@@ -361,25 +360,25 @@ static void mm_CVarRegister(cvar_t *pCvar) {
     META_ENGINE_HANDLE_void(FN_CVARREGISTER, pfnCVarRegister, p, (pCvar));
     RETURN_API_void()
 }
-static float mm_CVarGetFloat(const char *szVarName) {
+static float mm_CVarGetFloat(char const *szVarName) {
     META_ENGINE_HANDLE(float, 0.0, FN_CVARGETFLOAT, pfnCVarGetFloat, p, (szVarName));
     RETURN_API(float)
 }
-static const char * mm_CVarGetString(const char *szVarName) {
-    META_ENGINE_HANDLE(const char *, NULL, FN_CVARGETSTRING, pfnCVarGetString, p, (szVarName));
-    RETURN_API(const char *)
+static char const * mm_CVarGetString(char const *szVarName) {
+    META_ENGINE_HANDLE(char const *, NULL, FN_CVARGETSTRING, pfnCVarGetString, p, (szVarName));
+    RETURN_API(char const *)
 }
-static void mm_CVarSetFloat(const char *szVarName, float flValue) {
+static void mm_CVarSetFloat(char const *szVarName, float flValue) {
     META_ENGINE_HANDLE_void(FN_CVARSETFLOAT, pfnCVarSetFloat, pf, (szVarName, flValue));
 
-    meta_debug_value = (int)meta_debug.value;
+    meta_debug_value = static_cast<int>(meta_debug.value);
 
     RETURN_API_void()
 }
-static void mm_CVarSetString(const char *szVarName, const char *szValue) {
+static void mm_CVarSetString(char const *szVarName, char const *szValue) {
     META_ENGINE_HANDLE_void(FN_CVARSETSTRING, pfnCVarSetString, 2p, (szVarName, szValue));
 
-    meta_debug_value = (int)meta_debug.value;
+    meta_debug_value = static_cast<int>(meta_debug.value);
 
     RETURN_API_void()
 }
@@ -414,11 +413,11 @@ static void mm_FreeEntPrivateData(edict_t *pEdict) {
     RETURN_API_void()
 }
 
-static const char * mm_SzFromIndex(int iString) {
-    META_ENGINE_HANDLE(const char *, NULL, FN_SZFROMINDEX, pfnSzFromIndex, i, (iString));
-    RETURN_API(const char *)
+static char const * mm_SzFromIndex(int iString) {
+    META_ENGINE_HANDLE(char const *, NULL, FN_SZFROMINDEX, pfnSzFromIndex, i, (iString));
+    RETURN_API(char const *)
 }
-static int mm_AllocString(const char *szValue) {
+static int mm_AllocString(char const *szValue) {
     META_ENGINE_HANDLE(int, 0, FN_ALLOCSTRING, pfnAllocString, p, (szValue));
     RETURN_API(int)
 }
@@ -431,11 +430,11 @@ static edict_t * mm_PEntityOfEntOffset(int iEntOffset) {
     META_ENGINE_HANDLE(edict_t *, NULL, FN_PENTITYOFENTOFFSET, pfnPEntityOfEntOffset, i, (iEntOffset));
     RETURN_API(edict_t *)
 }
-static int mm_EntOffsetOfPEntity(const edict_t *pEdict) {
+static int mm_EntOffsetOfPEntity(edict_t const *pEdict) {
     META_ENGINE_HANDLE(int, 0, FN_ENTOFFSETOFPENTITY, pfnEntOffsetOfPEntity, p, (pEdict));
     RETURN_API(int)
 }
-static int mm_IndexOfEdict(const edict_t *pEdict) {
+static int mm_IndexOfEdict(edict_t const *pEdict) {
     META_ENGINE_HANDLE(int, 0, FN_INDEXOFEDICT, pfnIndexOfEdict, p, (pEdict));
     RETURN_API(int)
 }
@@ -452,17 +451,15 @@ static void * mm_GetModelPtr(edict_t *pEdict) {
     RETURN_API(void *)
 }
 
-static int mm_RegUserMsg(const char *pszName, int iSize) {
-    int imsgid;
-    MRegMsg *nmsg = NULL;
+static int mm_RegUserMsg(char const *pszName, int iSize) {
     META_ENGINE_HANDLE(int, 0, FN_REGUSERMSG, pfnRegUserMsg, pi, (pszName, iSize));
     // Expand the macro, since we need to do extra work.
-    /// RETURN_API(int)
-    imsgid = GET_RET_CLASS(ret_val, int);
+    // RETURN_API(int)
+    int const imsgid = GET_RET_CLASS(ret_val, int);
 
     // Add the msgid, name, and size to our saved list, if we haven't
     // already.
-    nmsg = RegMsgs->find(imsgid);
+    MRegMsg const * const nmsg = RegMsgs->find(imsgid);
     if (nmsg) {
         if (FStrEq(pszName, nmsg->name)) {
             // This name/msgid pair was already registered.
@@ -474,63 +471,63 @@ static int mm_RegUserMsg(const char *pszName, int iSize) {
         }
     }
     else RegMsgs->add(pszName, imsgid, iSize);
-    return(imsgid);
+    return imsgid;
 }
 
-static void mm_AnimationAutomove(const edict_t *pEdict, float flTime) {
+static void mm_AnimationAutomove(edict_t const *pEdict, float flTime) {
     META_ENGINE_HANDLE_void(FN_ANIMATIONAUTOMOVE, pfnAnimationAutomove, pf, (pEdict, flTime));
     RETURN_API_void()
 }
-static void mm_GetBonePosition(const edict_t *pEdict, int iBone, float *rgflOrigin, float *rgflAngles) {
+static void mm_GetBonePosition(edict_t const *pEdict, int iBone, float *rgflOrigin, float *rgflAngles) {
     META_ENGINE_HANDLE_void(FN_GETBONEPOSITION, pfnGetBonePosition, pi2p, (pEdict, iBone, rgflOrigin, rgflAngles));
     RETURN_API_void()
 }
 
 #ifdef HLSDK_3_2_OLD_EIFACE
-static unsigned long mm_FunctionFromName(const char *pName) {
+static unsigned long mm_FunctionFromName(char const *pName) {
     META_ENGINE_HANDLE(unsigned long, 0, FN_FUNCTIONFROMNAME, pfnFunctionFromName, p, (pName));
     RETURN_API(unsigned long)
 }
 #else
-static uint32 mm_FunctionFromName(const char *pName) {
+static uint32 mm_FunctionFromName(char const *pName) {
     META_ENGINE_HANDLE(uint32, 0, FN_FUNCTIONFROMNAME, pfnFunctionFromName, p, (pName));
     RETURN_API(uint32)
 }
 #endif
 #ifdef HLSDK_3_2_OLD_EIFACE
-static const char * mm_NameForFunction(unsigned long function) {
+static char const * mm_NameForFunction(unsigned long function) {
 #else
-static const char * mm_NameForFunction(uint32 function) {
+static char const * mm_NameForFunction(uint32 function) {
 #endif
-    META_ENGINE_HANDLE(const char *, NULL, FN_NAMEFORFUNCTION, pfnNameForFunction, ui, (function));
-    RETURN_API(const char *)
+    META_ENGINE_HANDLE(char const *, NULL, FN_NAMEFORFUNCTION, pfnNameForFunction, ui, (function));
+    RETURN_API(char const *)
 }
 
 //! JOHN: engine callbacks so game DLL can print messages to individual clients
-static void mm_ClientPrintf(edict_t *pEdict, PRINT_TYPE ptype, const char *szMsg) {
+static void mm_ClientPrintf(edict_t *pEdict, PRINT_TYPE ptype, char const *szMsg) {
     META_ENGINE_HANDLE_void(FN_CLIENTPRINTF, pfnClientPrintf, pip, (pEdict, ptype, szMsg));
     RETURN_API_void()
 }
-static void mm_ServerPrint(const char *szMsg) {
+static void mm_ServerPrint(char const *szMsg) {
     META_ENGINE_HANDLE_void(FN_SERVERPRINT, pfnServerPrint, p, (szMsg));
     RETURN_API_void()
 }
 
 //! these 3 added so game DLL can easily access client 'cmd' strings
-static const char * mm_Cmd_Args(void) {
-    META_ENGINE_HANDLE(const char *, NULL, FN_CMD_ARGS, pfnCmd_Args, void, (VOID_ARG));
-    RETURN_API(const char *)
+static char const * mm_Cmd_Args() {
+    META_ENGINE_HANDLE(char const *, NULL, FN_CMD_ARGS, pfnCmd_Args, void, (VOID_ARG));
+    RETURN_API(char const *)
 }
-static const char * mm_Cmd_Argv(int argc) {
-    META_ENGINE_HANDLE(const char *, NULL, FN_CMD_ARGV, pfnCmd_Argv, i, (argc));
-    RETURN_API(const char *)
+static char const * mm_Cmd_Argv(int argc) {
+    META_ENGINE_HANDLE(char const *, NULL, FN_CMD_ARGV, pfnCmd_Argv, i, (argc));
+    RETURN_API(char const *)
 }
-static int mm_Cmd_Argc(void) {
+static int mm_Cmd_Argc() {
     META_ENGINE_HANDLE(int, 0, FN_CMD_ARGC, pfnCmd_Argc, void, (VOID_ARG));
     RETURN_API(int)
 }
 
-static void mm_GetAttachment(const edict_t *pEdict, int iAttachment, float *rgflOrigin, float *rgflAngles) {
+static void mm_GetAttachment(edict_t const *pEdict, int iAttachment, float *rgflOrigin, float *rgflAngles) {
     META_ENGINE_HANDLE_void(FN_GETATTACHMENT, pfnGetAttachment, pi2p, (pEdict, iAttachment, rgflOrigin, rgflAngles));
     RETURN_API_void()
 }
@@ -568,15 +565,15 @@ static float mm_RandomFloat(float flLow, float flHigh) {
     RETURN_API(float)
 }
 
-static void mm_SetView(const edict_t *pClient, const edict_t *pViewent) {
+static void mm_SetView(edict_t const *pClient, edict_t const *pViewent) {
     META_ENGINE_HANDLE_void(FN_SETVIEW, pfnSetView, 2p, (pClient, pViewent));
     RETURN_API_void()
 }
-static float mm_Time(void) {
+static float mm_Time() {
     META_ENGINE_HANDLE(float, 0.0, FN_TIME, pfnTime, void, (VOID_ARG));
     RETURN_API(float)
 }
-static void mm_CrosshairAngle(const edict_t *pClient, float pitch, float yaw) {
+static void mm_CrosshairAngle(edict_t const *pClient, float pitch, float yaw) {
     META_ENGINE_HANDLE_void(FN_CROSSHAIRANGLE, pfnCrosshairAngle, p2f, (pClient, pitch, yaw));
     RETURN_API_void()
 }
@@ -591,7 +588,7 @@ static void mm_FreeFile(void *buffer) {
 }
 
 //! trigger_endsection
-static void mm_EndSection(const char *pszSectionName) {
+static void mm_EndSection(char const *pszSectionName) {
     META_ENGINE_HANDLE_void(FN_ENDSECTION, pfnEndSection, p, (pszSectionName));
     RETURN_API_void()
 }
@@ -607,24 +604,24 @@ static void mm_Cvar_RegisterVariable(cvar_t *variable) {
     META_ENGINE_HANDLE_void(FN_CVAR_REGISTERVARIABLE, pfnCvar_RegisterVariable, p, (variable));
     RETURN_API_void()
 }
-static void mm_FadeClientVolume(const edict_t *pEdict, int fadePercent, int fadeOutSeconds, int holdTime, int fadeInSeconds) {
+static void mm_FadeClientVolume(edict_t const *pEdict, int fadePercent, int fadeOutSeconds, int holdTime, int fadeInSeconds) {
     META_ENGINE_HANDLE_void(FN_FADECLIENTVOLUME, pfnFadeClientVolume, p4i, (pEdict, fadePercent, fadeOutSeconds, holdTime, fadeInSeconds));
     RETURN_API_void()
 }
-static void mm_SetClientMaxspeed(const edict_t *pEdict, float fNewMaxspeed) {
+static void mm_SetClientMaxspeed(edict_t const *pEdict, float fNewMaxspeed) {
     META_ENGINE_HANDLE_void(FN_SETCLIENTMAXSPEED, pfnSetClientMaxspeed, pf, (pEdict, fNewMaxspeed));
     RETURN_API_void()
 }
 //! returns NULL if fake client can't be created
-static edict_t * mm_CreateFakeClient(const char *netname) {
+static edict_t * mm_CreateFakeClient(char const *netname) {
     META_ENGINE_HANDLE(edict_t *, NULL, FN_CREATEFAKECLIENT, pfnCreateFakeClient, p, (netname));
     RETURN_API(edict_t *)
 }
-static void mm_RunPlayerMove(edict_t *fakeclient, const float *viewangles, float forwardmove, float sidemove, float upmove, unsigned short buttons, byte impulse, byte msec) {
+static void mm_RunPlayerMove(edict_t *fakeclient, float const *viewangles, float forwardmove, float sidemove, float upmove, unsigned short buttons, byte impulse, byte msec) {
     META_ENGINE_HANDLE_void(FN_RUNPLAYERMOVE, pfnRunPlayerMove, 2p3fus2uc, (fakeclient, viewangles, forwardmove, sidemove, upmove, buttons, impulse, msec));
     RETURN_API_void()
 }
-static int mm_NumberOfEntities(void) {
+static int mm_NumberOfEntities() {
     META_ENGINE_HANDLE(int, 0, FN_NUMBEROFENTITIES, pfnNumberOfEntities, void, (VOID_ARG));
     RETURN_API(int)
 }
@@ -651,7 +648,7 @@ static int mm_IsMapValid(char *filename) {
     META_ENGINE_HANDLE(int, 0, FN_ISMAPVALID, pfnIsMapValid, p, (filename));
     RETURN_API(int)
 }
-static void mm_StaticDecal(const float *origin, int decalIndex, int entityIndex, int modelIndex) {
+static void mm_StaticDecal(float const *origin, int decalIndex, int entityIndex, int modelIndex) {
     META_ENGINE_HANDLE_void(FN_STATICDECAL, pfnStaticDecal, p3i, (origin, decalIndex, entityIndex, modelIndex));
     RETURN_API_void()
 }
@@ -664,17 +661,16 @@ static int mm_GetPlayerUserId(edict_t *e) {
     META_ENGINE_HANDLE(int, 0, FN_GETPLAYERUSERID, pfnGetPlayerUserId, p, (e));
     RETURN_API(int)
 }
-static void mm_BuildSoundMsg(edict_t *entity, int channel, const char *sample, float volume, float attenuation, int fFlags, int pitch, int msg_dest, int msg_type, const float *pOrigin, edict_t *ed)
-{
+static void mm_BuildSoundMsg(edict_t *entity, int channel, char const *sample, float volume, float attenuation, int fFlags, int pitch, int msg_dest, int msg_type, float const *pOrigin, edict_t *ed) {
     META_ENGINE_HANDLE_void(FN_BUILDSOUNDMSG, pfnBuildSoundMsg, pip2f4i2p, (entity, channel, sample, volume, attenuation, fFlags, pitch, msg_dest, msg_type, pOrigin, ed));
     RETURN_API_void()
 }
 //! is this a dedicated server?
-static int mm_IsDedicatedServer(void) {
+static int mm_IsDedicatedServer() {
     META_ENGINE_HANDLE(int, 0, FN_ISDEDICATEDSERVER, pfnIsDedicatedServer, void, (VOID_ARG));
     RETURN_API(int)
 }
-static cvar_t * mm_CVarGetPointer(const char *szVarName) {
+static cvar_t * mm_CVarGetPointer(char const *szVarName) {
     META_ENGINE_HANDLE(cvar_t *, NULL, FN_CVARGETPOINTER, pfnCVarGetPointer, p, (szVarName));
     RETURN_API(cvar_t *)
 }
@@ -685,27 +681,27 @@ static unsigned int mm_GetPlayerWONId(edict_t *e) {
 }
 
 //! YWB 8/1/99 TFF Physics additions
-static void mm_Info_RemoveKey(char *s, const char *key) {
+static void mm_Info_RemoveKey(char *s, char const *key) {
     META_ENGINE_HANDLE_void(FN_INFO_REMOVEKEY, pfnInfo_RemoveKey, 2p, (s, key));
     RETURN_API_void()
 }
-static const char * mm_GetPhysicsKeyValue(const edict_t *pClient, const char *key) {
-    META_ENGINE_HANDLE(const char *, NULL, FN_GETPHYSICSKEYVALUE, pfnGetPhysicsKeyValue, 2p, (pClient, key));
-    RETURN_API(const char *)
+static char const * mm_GetPhysicsKeyValue(edict_t const *pClient, char const *key) {
+    META_ENGINE_HANDLE(char const *, NULL, FN_GETPHYSICSKEYVALUE, pfnGetPhysicsKeyValue, 2p, (pClient, key));
+    RETURN_API(char const *)
 }
-static void mm_SetPhysicsKeyValue(const edict_t *pClient, const char *key, const char *value) {
+static void mm_SetPhysicsKeyValue(edict_t const *pClient, char const *key, char const *value) {
     META_ENGINE_HANDLE_void(FN_SETPHYSICSKEYVALUE, pfnSetPhysicsKeyValue, 3p, (pClient, key, value));
     RETURN_API_void()
 }
-static const char * mm_GetPhysicsInfoString(const edict_t *pClient) {
-    META_ENGINE_HANDLE(const char *, NULL, FN_GETPHYSICSINFOSTRING, pfnGetPhysicsInfoString, p, (pClient));
-    RETURN_API(const char *)
+static char const * mm_GetPhysicsInfoString(edict_t const *pClient) {
+    META_ENGINE_HANDLE(char const *, NULL, FN_GETPHYSICSINFOSTRING, pfnGetPhysicsInfoString, p, (pClient));
+    RETURN_API(char const *)
 }
-static unsigned short mm_PrecacheEvent(int type, const char *psz) {
+static unsigned short mm_PrecacheEvent(int type, char const *psz) {
     META_ENGINE_HANDLE(unsigned short, 0, FN_PRECACHEEVENT, pfnPrecacheEvent, ip, (type, psz));
     RETURN_API(unsigned short)
 }
-static void mm_PlaybackEvent(int flags, const edict_t *pInvoker, unsigned short eventindex, float delay, float *origin, float *angles, float fparam1, float fparam2, int iparam1, int iparam2, int bparam1, int bparam2) {
+static void mm_PlaybackEvent(int flags, edict_t const *pInvoker, unsigned short eventindex, float delay, float *origin, float *angles, float fparam1, float fparam2, int iparam1, int iparam2, int bparam1, int bparam2) {
     META_ENGINE_HANDLE_void(FN_PLAYBACKEVENT, pfnPlaybackEvent, ipusf2p2f4i, (flags, pInvoker, eventindex, delay, origin, angles, fparam1, fparam2, iparam1, iparam2, bparam1, bparam2));
     RETURN_API_void()
 }
@@ -719,32 +715,32 @@ static unsigned char * mm_SetFatPAS(float *org) {
     RETURN_API(unsigned char *)
 }
 
-static int mm_CheckVisibility(const edict_t *entity, unsigned char *pset) {
+static int mm_CheckVisibility(edict_t const *entity, unsigned char *pset) {
     META_ENGINE_HANDLE(int, 0, FN_CHECKVISIBILITY, pfnCheckVisibility, 2p, (entity, pset));
     RETURN_API(int)
 }
 
-static void mm_DeltaSetField(struct delta_s *pFields, const char *fieldname) {
+static void mm_DeltaSetField(struct delta_s *pFields, char const *fieldname) {
     META_ENGINE_HANDLE_void(FN_DELTASETFIELD, pfnDeltaSetField, 2p, (pFields, fieldname));
     RETURN_API_void()
 }
-static void mm_DeltaUnsetField(struct delta_s *pFields, const char *fieldname) {
+static void mm_DeltaUnsetField(struct delta_s *pFields, char const *fieldname) {
     META_ENGINE_HANDLE_void(FN_DELTAUNSETFIELD, pfnDeltaUnsetField, 2p, (pFields, fieldname));
     RETURN_API_void()
 }
-static void mm_DeltaAddEncoder(char *name, void (*conditionalencode)(struct delta_s *pFields, const unsigned char *from, const unsigned char *to)) {
+static void mm_DeltaAddEncoder(char *name, void (*conditionalencode)(struct delta_s *pFields, unsigned char const *from, unsigned char const *to)) {
     META_ENGINE_HANDLE_void(FN_DELTAADDENCODER, pfnDeltaAddEncoder, 2p, (name, (void *)conditionalencode));
     RETURN_API_void()
 }
-static int mm_GetCurrentPlayer(void) {
+static int mm_GetCurrentPlayer() {
     META_ENGINE_HANDLE(int, 0, FN_GETCURRENTPLAYER, pfnGetCurrentPlayer, void, (VOID_ARG));
     RETURN_API(int)
 }
-static int mm_CanSkipPlayer(const edict_t *player) {
+static int mm_CanSkipPlayer(edict_t const *player) {
     META_ENGINE_HANDLE(int, 0, FN_CANSKIPPLAYER, pfnCanSkipPlayer, p, (player));
     RETURN_API(int)
 }
-static int mm_DeltaFindField(struct delta_s *pFields, const char *fieldname) {
+static int mm_DeltaFindField(struct delta_s *pFields, char const *fieldname) {
     META_ENGINE_HANDLE(int, 0, FN_DELTAFINDFIELD, pfnDeltaFindField, 2p, (pFields, fieldname));
     RETURN_API(int)
 }
@@ -777,17 +773,17 @@ static void mm_Cvar_DirectSet(struct cvar_s *var, char *value) {
 //! Forces the client and server to be running with the same version of the specified file
 //! (e.g., a player model).
 //! Calling this has no effect in single player
-static void mm_ForceUnmodified(FORCE_TYPE type, float *mins, float *maxs, const char *filename) {
+static void mm_ForceUnmodified(FORCE_TYPE type, float *mins, float *maxs, char const *filename) {
     META_ENGINE_HANDLE_void(FN_FORCEUNMODIFIED, pfnForceUnmodified, i3p, (type, mins, maxs, filename));
     RETURN_API_void()
 }
 
-static void mm_GetPlayerStats(const edict_t *pClient, int *ping, int *packet_loss) {
+static void mm_GetPlayerStats(edict_t const *pClient, int *ping, int *packet_loss) {
     META_ENGINE_HANDLE_void(FN_GETPLAYERSTATS, pfnGetPlayerStats, 3p, (pClient, ping, packet_loss));
     RETURN_API_void()
 }
 
-static void mm_AddServerCommand(char *cmd_name, void (*function) (void)) {
+static void mm_AddServerCommand(char *cmd_name, void (*function) ()) {
     META_ENGINE_HANDLE_void(FN_ADDSERVERCOMMAND, pfnAddServerCommand, 2p, (cmd_name, (void *)function));
     RETURN_API_void()
 }
@@ -807,19 +803,19 @@ static qboolean mm_Voice_SetClientListening(int iReceiver, int iSender, qboolean
 
 // Added for HL 1109 (no SDK update):
 
-static const char * mm_GetPlayerAuthId(edict_t *e) {
-    META_ENGINE_HANDLE(const char *, NULL, FN_GETPLAYERAUTHID, pfnGetPlayerAuthId, p, (e));
-    RETURN_API(const char *)
+static char const * mm_GetPlayerAuthId(edict_t *e) {
+    META_ENGINE_HANDLE(char const *, NULL, FN_GETPLAYERAUTHID, pfnGetPlayerAuthId, p, (e));
+    RETURN_API(char const *)
 }
 
 // Added 2003/11/10 (no SDK update):
 
-static sequenceEntry_s * mm_SequenceGet(const char *fileName, const char *entryName) {
+static sequenceEntry_s * mm_SequenceGet(char const *fileName, char const *entryName) {
     META_ENGINE_HANDLE(sequenceEntry_s *, NULL, FN_SEQUENCEGET, pfnSequenceGet, 2p, (fileName, entryName));
     RETURN_API(sequenceEntry_s *)
 }
 
-static sentenceEntry_s * mm_SequencePickSentence(const char *groupName, int pickMethod, int *picked) {
+static sentenceEntry_s * mm_SequencePickSentence(char const *groupName, int pickMethod, int *picked) {
     META_ENGINE_HANDLE(sentenceEntry_s *, NULL, FN_SEQUENCEPICKSENTENCE, pfnSequencePickSentence, pip, (groupName, pickMethod, picked));
     RETURN_API(sentenceEntry_s *)
 }
@@ -829,17 +825,17 @@ static int mm_GetFileSize(char *filename) {
     RETURN_API(int)
 }
 
-static unsigned int mm_GetApproxWavePlayLen(const char *filepath) {
+static unsigned int mm_GetApproxWavePlayLen(char const *filepath) {
     META_ENGINE_HANDLE(unsigned int, 0, FN_GETAPPROXWAVEPLAYLEN, pfnGetApproxWavePlayLen, p, (filepath));
     RETURN_API(unsigned int)
 }
 
-static int mm_IsCareerMatch(void) {
+static int mm_IsCareerMatch() {
     META_ENGINE_HANDLE(int, 0, FN_ISCAREERMATCH, pfnIsCareerMatch, void, (VOID_ARG));
     RETURN_API(int)
 }
 
-static int mm_GetLocalizedStringLength(const char *label) {
+static int mm_GetLocalizedStringLength(char const *label) {
     META_ENGINE_HANDLE(int, 0, FN_GETLOCALIZEDSTRINGLENGTH, pfnGetLocalizedStringLength, p, (label));
     RETURN_API(int)
 }
@@ -864,19 +860,20 @@ static void mm_ConstructTutorMessageDecayBuffer(int *buffer, int bufferLength) {
     RETURN_API_void()
 }
 
-static void mm_ResetTutorMessageDecayData(void) {
+static void mm_ResetTutorMessageDecayData() {
     META_ENGINE_HANDLE_void(FN_RESETTUTORMESSAGEDECAYDATA, pfnResetTutorMessageDecayData, void, (VOID_ARG));
     RETURN_API_void()
 }
 
 // Added 2005/08/11 (no SDK update):
-static void mm_QueryClientCvarValue(const edict_t *player, const char *cvarName) {
+static void mm_QueryClientCvarValue(edict_t const *player, char const *cvarName) {
     static mBOOL s_check = mFALSE;
 
     // Engine version didn't change when this API was added.  Check if the pointer is valid.
     if (
-        ! s_check && g_engfuncs.pfnQueryClientCvarValue &&
-        ! IS_VALID_PTR((void *)g_engfuncs.pfnQueryClientCvarValue)
+        (! s_check) &&
+        g_engfuncs.pfnQueryClientCvarValue &&
+        (! IS_VALID_PTR(reinterpret_cast<void *>(g_engfuncs.pfnQueryClientCvarValue)))
     ) {
         g_engfuncs.pfnQueryClientCvarValue = NULL;
         s_check = mTRUE;
@@ -887,13 +884,14 @@ static void mm_QueryClientCvarValue(const edict_t *player, const char *cvarName)
 }
 
 // Added 2005/11/21 (no SDK update):
-static void mm_QueryClientCvarValue2(const edict_t *player, const char *cvarName, int requestID) {
+static void mm_QueryClientCvarValue2(edict_t const *player, char const *cvarName, int requestID) {
     static mBOOL s_check = mFALSE;
 
     // Engine version didn't change when this API was added.  Check if the pointer is valid.
     if (
-        ! s_check && g_engfuncs.pfnQueryClientCvarValue2 &&
-        ! IS_VALID_PTR((void *)g_engfuncs.pfnQueryClientCvarValue2)
+        (! s_check) &&
+        g_engfuncs.pfnQueryClientCvarValue2 &&
+        (! IS_VALID_PTR(reinterpret_cast<void *>(g_engfuncs.pfnQueryClientCvarValue2)))
     ) {
         g_engfuncs.pfnQueryClientCvarValue2 = NULL;
         s_check = mTRUE;
@@ -904,13 +902,14 @@ static void mm_QueryClientCvarValue2(const edict_t *player, const char *cvarName
 }
 
 // Added 2009/06/19 (no SDK update):
-static int mm_EngCheckParm(const char *pchCmdLineToken, char **pchNextVal) {
+static int mm_EngCheckParm(char const *pchCmdLineToken, char **pchNextVal) {
     static mBOOL s_check = mFALSE;
 
     // Engine version didn't change when this API was added.  Check if the pointer is valid.
     if (
-        ! s_check && g_engfuncs.pfnEngCheckParm &&
-        ! IS_VALID_PTR((void *)g_engfuncs.pfnEngCheckParm)
+        (! s_check) &&
+        g_engfuncs.pfnEngCheckParm &&
+        (! IS_VALID_PTR(reinterpret_cast<void *>(g_engfuncs.pfnEngCheckParm)))
     ) {
         g_engfuncs.pfnEngCheckParm = NULL;
         s_check = mTRUE;
