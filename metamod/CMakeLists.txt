@@ -32,6 +32,10 @@ set_property(SOURCE "vdate.cpp" APPEND PROPERTY COMPILE_DEFINITIONS "COMPILE_TZ=
 set_property(SOURCE "vdate.cpp" APPEND PROPERTY COMPILE_DEFINITIONS "METAMOD_COMPILE_TIME=\"${_compile_time}\"")
 set_property(SOURCE "vdate.cpp" APPEND PROPERTY COMPILE_DEFINITIONS "METAMOD_COMPILE_DATE=\"${_compile_date}\"")
 
+if(NOT MSVC)
+    set_property(SOURCE "meta_eiface.cpp" APPEND PROPERTY COMPILE_FLAGS "-Wno-implicit-fallthrough")
+endif()
+
 target_include_directories("metamod" PRIVATE "../hlsdk/dlls" "../hlsdk/engine" "../hlsdk/common")
 
 target_compile_definitions("metamod" PRIVATE "$<$<CONFIG:Release>:__BUILD_FAST_METAMOD__>")
