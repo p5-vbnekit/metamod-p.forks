@@ -138,6 +138,16 @@ mBOOL DLLINTERNAL install_gamedll(char *from, char const *to) {
 // meta_errno values:
 //  - ME_NOTFOUND   couldn't recognize game
 mBOOL DLLINTERNAL setup_gamedll(gamedll_t *gamedll) {
+    if (true) {
+        static bool flag_= false;
+        if (flag_) {
+            META_ERROR("Logic bug: setup_gamedll is already called!");
+            meta_errno = ME_NOTALLOWED;
+            return(mFALSE);
+        }
+        flag_ = true;
+    }
+
     // Check for old-style "metagame.ini" file and complain.
     if (valid_gamedir_file(OLD_GAMEDLL_TXT)) META_WARNING(
         "File '%s' is no longer supported; instead, specify override gamedll in %s or with '+localinfo mm_gamedll <dllfile>'",
