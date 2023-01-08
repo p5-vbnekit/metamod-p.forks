@@ -1,0 +1,173 @@
+inputs:
+  key: { required: true }
+  path: { required: false, default: "." }
+
+runs:
+  using: "composite"
+  steps:
+    - name: installing system packages
+      shell: sudo sh -e {0}
+      run: |
+        # installing system packages
+        echo "::group::Installing packages" >&2
+        export DEBIAN_FRONTEND="noninteractive"
+        apt update --assume-yes
+        apt install --assume-yes python3
+        echo "::endgroup::" >&2
+
+    - id: get_internals
+      name: generating internal variables
+      uses: actions/github-script@v6
+      with:
+        script: |
+          core.setOutput("api", process.env["ACTIONS_CACHE_URL"]);
+          core.setOutput("token", process.env["ACTIONS_RUNTIME_TOKEN"]);
+
+    - id: get_config
+      name: generating config
+      shell: python3 {0} "${{ github.action_path }}"
+      run: |
+        # generating config
+
+        import os
+        import sys
+        import json
+        import pathlib
+        import tempfile
+
+        _current_action_path, = sys.argv[1:]
+        _current_action_path = os.path.realpath(os.path.normpath(_current_action_path))
+        try: assert bool(_current_action_path) and os.path.isdir(_current_action_path)
+        except AssertionError: raise ValueError(f"current_action_path: {_current_action_path}")
+
+        _inputs = json.loads("""
+        ${{ toJSON(inputs) }}
+        """.strip())
+        assert isinstance(_inputs, dict)
+
+        _key = _inputs.pop("key")
+        _path = _inputs.pop("path")
+
+        try: assert not _inputs
+        except AssertionError: raise ValueError(f"unexpected keys: {', '.join(_inputs.keys())}")
+
+        _internals = json.loads("""
+        ${{ toJSON(steps.get_internals.outputs) }}
+        """.strip())
+        assert isinstance(_internals, dict)
+
+        _internals_api = _internals.pop("api")
+        _internals_token = _internals.pop("token")
+        _internals_result = _internals.pop("result")
+
+        try: assert not _internals
+        except AssertionError: raise ValueError(f"unexpected keys: {', '.join(_internals.keys())}")
+
+        _python_modules_path = os.path.realpath(os.path.normpath(os.path.join(_current_action_path, "../..", "python/modules")))
+
+        try:
+          assert isinstance(_python_modules_path, str)
+          assert bool(_python_modules_path)
+          assert os.path.isdir(_python_modules_path)
+          sys.path.append(_python_modules_path)
+          from ci_helpers import log_group as _log_group_module
+          from ci_helpers import validators as _validators_module
+        except BaseException: raise RuntimeError(f"failed to import from {_python_modules_path}")
+
+        try: _validators_module.validate_text_argument(_key, require = True, require_inline = True, require_stripped = False)
+        except BaseException: raise ValueError(f"key: {_key}")
+
+        try:
+          assert isinstance(_path, str) and bool(_path)
+          if "." == _path: _path = os.path.abspath(".")
+          else:
+            assert _path == os.path.normpath(_path)
+            _path = pathlib.PosixPath(_path)
+            assert not _path.is_absolute()
+            assert "." not in _path.parts
+            assert ".." not in _path.parts
+            _path = _path.as_posix()
+        except AssertionError: raise ValueError(f"path: {_path}")
+
+        try: _validators_module.validate_text_argument(_internals_api, require = True, require_inline = True, require_stripped = True)
+        except BaseException: raise ValueError(f"internals.api: {_internals_api}")
+
+        try: _validators_module.validate_text_argument(_internals_token, require = True, require_inline = True, require_stripped = True)
+        except BaseException: raise ValueError(f"internals.token: {_internals_token}")
+
+        try:
+          assert isinstance(_internals_result, str)
+          assert not _internals_result
+        except BaseException: raise ValueError(f"internals.result: {_internals_result}")
+
+        _collector = {
+          "key": _key,
+          "path": _path,
+          "internals": {"api": _internals_api, "token": _internals_token},
+          "python_modules_path": _python_modules_path
+        }
+
+        _result = tempfile.NamedTemporaryFile(mode = "w", suffix = ".config.json", delete = False)
+        with _result as _stream: json.dump(_collector, fp = _stream)
+        _result = _result.name
+
+        with _log_group_module.make(f"Config generated: {_result}"):
+          print(json.dumps(_collector, indent = 2), file = sys.stderr, flush = True)
+
+        with open(os.environ["GITHUB_OUTPUT"], "w+") as _stream:
+          print(f"result={_result}", file = _stream)
+
+    - name: downloading
+      shell: python3 {0} "${{ steps.get_config.outputs.result }}"
+      run: |
+        # downloading
+
+        import os
+        import sys
+        import json
+        import pathlib
+        import tempfile
+        import subprocess
+
+        _config, = sys.argv[1:]
+        assert isinstance(_config, str) and bool(_config)
+        with open(_config, "r") as _config: _config = json.load(_config)
+        assert isinstance(_config, dict) and bool(_config)
+
+        sys.path.append(_config.pop("python_modules_path"))
+        from ci_helpers import cache as _cache_module
+        from ci_helpers import log_group as _log_group_module
+        from ci_helpers import validators as _validators_module
+
+        _key = _config.pop("key")
+        _path = _config.pop("path")
+        _internals = _config.pop("internals")
+
+        with _log_group_module.make(f"Downloading cache into: {_path}"):
+          try: os.makedirs(_path, exist_ok = False)
+          except FileExistsError: assert os.path.isdir(_path)
+
+          for _item in _cache_module.scan(
+            api = "${{ github.api_url }}",
+            key = _key,
+            ref = "${{ github.ref }}",
+            repo = "${{ github.repository }}",
+            token = "${{ github.token }}"
+          ):
+            _item = {**_item, **_cache_module.query(
+              api = _internals["api"],
+              key = _item["key"],
+              token = _internals["token"],
+              version = _item["version"]
+            )}
+            _item_version = _item["version"]
+            _validators_module.validate_text_argument(_item_version, require = True, require_inline = True, require_stripped = True)
+            print(f"downloading {_item_version}", file = sys.stderr, flush = True)
+            with tempfile.NamedTemporaryFile(mode = "wb", suffix = f".{_item_version}.download") as _stream:
+              for _chunk in _cache_module.download(_item["url"]): _stream.write(_chunk)
+              _stream.flush()
+              assert _item["size"] == _stream.tell()
+              subprocess.run(
+                  ("tar", "--extract", f"--file={_stream.name}", f"--directory={_path}"),
+                  check = True, stdin = subprocess.DEVNULL, stdout = subprocess.DEVNULL
+              )

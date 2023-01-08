@@ -1,0 +1,175 @@
+inputs: { key: { required: true } }
+
+runs:
+  using: "composite"
+  steps:
+    - name: installing system packages
+      shell: sudo sh -e {0}
+      run: |
+        # installing system packages
+        echo "::group::Installing packages" >&2
+        export DEBIAN_FRONTEND="noninteractive"
+        apt update --assume-yes
+        apt install --assume-yes podman buildah python3
+        echo "::endgroup::" >&2
+
+    - id: get_config
+      name: generating config
+      shell: python3 {0} "${{ github.action_path }}"
+      run: |
+        # generating config
+
+        import os
+        import sys
+        import json
+        import pathlib
+        import tempfile
+
+        _current_action_path, = sys.argv[1:]
+        _current_action_path = os.path.realpath(os.path.normpath(_current_action_path))
+        try: assert bool(_current_action_path) and os.path.isdir(_current_action_path)
+        except AssertionError: raise ValueError(f"current_action_path: {_current_action_path}")
+
+        _inputs = json.loads("""
+        ${{ toJSON(inputs) }}
+        """.strip())
+        assert isinstance(_inputs, dict)
+
+        _key = _inputs.pop("key")
+
+        try: assert not _inputs
+        except AssertionError: raise ValueError(f"unexpected keys: {', '.join(_inputs.keys())}")
+
+        try:
+          assert isinstance(_key, str) and bool(_key)
+          assert _key == os.path.normpath(_key)
+          _key = pathlib.PosixPath(_key)
+          assert not _key.is_absolute()
+          assert "." not in _key.parts
+          assert ".." not in _key.parts
+        except AssertionError: raise ValueError(f"key: {_key}")
+
+        _image_name = "sandbox.local:{}".format(".".join(_key.parts))
+
+        _key = _key.as_posix()
+
+        _python_modules_path = os.path.realpath(os.path.normpath(os.path.join(_current_action_path, "../../..", "python/modules")))
+
+        try:
+          assert isinstance(_python_modules_path, str)
+          assert bool(_python_modules_path)
+          assert os.path.isdir(_python_modules_path)
+          sys.path.append(_python_modules_path)
+          from ci_helpers import log_group as _log_group_module
+        except BaseException: raise RuntimeError(f"failed to import from {_python_modules_path}")
+
+        _cached_layers_path = "cache/podman/layers.tar"
+
+        _build_context_path = os.path.realpath(os.path.normpath(os.path.join(_current_action_path, "../../..", "podman/build_contexts", _key)))
+        try: assert os.path.isdir(_build_context_path)
+        except BaseException: raise ValueError(f"build_context_path: {_build_context_path}")
+
+        _collector = {
+          "image_name": _image_name,
+          "cached_layers_path": _cached_layers_path,
+          "build_context_path": _build_context_path,
+          "python_modules_path": _python_modules_path
+        }
+
+        _result = tempfile.NamedTemporaryFile(mode = "w", suffix = ".config.json", delete = False)
+        with _result as _stream: json.dump(_collector, fp = _stream)
+        _result = _result.name
+
+        with _log_group_module.make(f"Config generated: {_result}"):
+          print(json.dumps(_collector, indent = 2), file = sys.stderr, flush = True)
+
+        with open(os.environ["GITHUB_OUTPUT"], "w+") as _stream:
+          print(f"result={_result}", file = _stream)
+          print(f"cached_layers_path={_cached_layers_path}", file = _stream)
+          print(f"build_context_path={_build_context_path}", file = _stream)
+
+    - id: get_cache_key
+      name: generating cache key
+      shell: python3 {0} "${{ hashFiles(steps.get_config.outputs.build_context_path) }}"
+      run: |
+        # generating cache key
+
+        import os
+        import sys
+        import json
+
+        _result, = sys.argv[1:]
+        assert bool(_result)
+        assert _result.strip() == _result
+        assert _result.splitlines()[0] == _result
+
+        with open(os.environ["GITHUB_OUTPUT"], "w+") as _stream: print(f"result=podman/layers/{_result}", file = _stream)
+
+    - id: restore_cache
+      uses: actions/cache/restore@v3
+      with:
+        key: "${{ steps.get_cache_key.outputs.result }}/${{ github.run_id }}"
+        path: "${{ steps.get_config.outputs.cached_layers_path }}"
+        restore-keys: "${{ steps.get_cache_key.outputs.result }}/"
+
+    - if: steps.restore_cache.outputs.cache-hit == 'true'
+      shell: python3 {0}
+      run: raise RuntimeError("unexpected cache hit")
+
+    - id: make_image
+      shell: python3 {0} "${{ steps.get_config.outputs.result }}"
+      name: generating image
+      run: |
+        # generating image
+
+        import os
+        import sys
+        import json
+        import subprocess
+
+        _config, = sys.argv[1:]
+        assert isinstance(_config, str) and bool(_config)
+        with open(_config, "r") as _config: _config = json.load(_config)
+        assert isinstance(_config, dict) and bool(_config)
+
+        _image_name = _config.pop("image_name")
+        try: assert isinstance(_image_name, str) and bool(_image_name)
+        except AssertionError: raise ValueError(f"image_name: {_image_name}")
+
+        _build_context_path = _config.pop("build_context_path")
+        try: assert isinstance(_build_context_path, str) and bool(_build_context_path) and os.path.isdir(_build_context_path)
+        except AssertionError: raise ValueError(f"build_context_path: {_build_context_path}")
+
+        _cached_layers_path = _config.pop("cached_layers_path")
+        try: assert isinstance(_cached_layers_path, str) and bool(_cached_layers_path)
+        except AssertionError: raise ValueError(f"cached_layers_path: {_cached_layers_path}")
+
+        sys.path.append(_config.pop("python_modules_path"))
+        from ci_helpers import podman as _podman_module
+        from ci_helpers import log_group as _log_group_module
+
+        _old_image = None
+        if os.path.exists(_cached_layers_path):
+          with _log_group_module.make(f"Loading cached image layers from file: {_cached_layers_path}"):
+            if _podman_module.load_layers(_cached_layers_path): _old_image = _podman_module.get_image_id(_image_name)
+            else: print("Nothing loaded", file = sys.stderr, flush = True)
+
+        _action = "Building" if (_old_image is None) else "Upgrading"
+        with _log_group_module.make(f"{_action} image: {_image_name}"):
+          _podman_module.build_image(_image_name, pull = True, context = _build_context_path)
+
+        _updated = (_old_image != _podman_module.get_image_id(_image_name))
+        if _updated:
+          with _log_group_module.make(f"Generating cache data: {_cached_layers_path}"):
+            try: os.remove(_cached_layers_path)
+            except FileNotFoundError: pass
+            _podman_module.save_layers(_image_name, path = _cached_layers_path)
+
+        with open(os.environ["GITHUB_OUTPUT"], "w+") as _stream:
+          print(f"updated={'true' if _updated else 'false'}", file = _stream)
+
+    - if:  steps.make_image.outputs.updated == 'true'
+      uses: actions/cache/save@v3
+      with:
+        key: "${{ steps.get_cache_key.outputs.result }}/${{ github.run_id }}"
+        path: "${{ steps.get_config.outputs.cached_layers_path }}"
