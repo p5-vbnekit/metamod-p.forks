@@ -1,0 +1,5 @@
+cmake_minimum_required(VERSION "3.9")
+project("metamod-p.compile_time_tests.ipo_with_static_libstdcxx" LANGUAGES "CXX")
+add_executable("executable" "main.cxx")
+target_link_options("executable" PRIVATE "-static-libstdc++")
+set_target_properties("executable" PROPERTIES "INTERPROCEDURAL_OPTIMIZATION" TRUE)

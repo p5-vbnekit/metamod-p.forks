@@ -1,0 +1,48 @@
+function("_print_todo_warnings")
+    unset("_state" CACHE)
+    get_property("_state" DIRECTORY "${CMAKE_SOURCE_DIR}" PROPERTY "_print_todo_warnings.state" SET)
+    mark_as_advanced("_state")
+
+    if(_state)
+        return()
+    endif()
+
+    set_property(DIRECTORY "${CMAKE_SOURCE_DIR}" PROPERTY "_print_todo_warnings.state" TRUE)
+
+    include("_inspect_platform")
+    _inspect_platform()
+
+    unset("_platform.stdcall_alias" CACHE)
+    get_property("_platform.stdcall_alias" DIRECTORY "${CMAKE_SOURCE_DIR}" PROPERTY "_inspect_platform.stdcall_alias")
+    mark_as_advanced("_platform.stdcall_alias")
+
+    unset("_platform.hidden_static" CACHE)
+    get_property("_platform.hidden_static" DIRECTORY "${CMAKE_SOURCE_DIR}" PROPERTY "_inspect_platform.hidden_static")
+    mark_as_advanced("_platform.hidden_static")
+
+    unset("_platform.windres_sz_definition" CACHE)
+    get_property("_platform.windres_sz_definition" DIRECTORY "${CMAKE_SOURCE_DIR}" PROPERTY "_inspect_platform.windres_sz_definition")
+    mark_as_advanced("_platform.windres_sz_definition")
+
+    message(WARNING "TODO: check that `_DEBUG` compile definition (not enabled in legacy `Makefile`s) doesn't break logic")
+
+    if(NOT MSVC)
+        if(NOT "${_platform.hidden_static}")
+            message(WARNING "TODO: fix code and remove \"hidden\" visibility attributes or static linkage")
+        endif()
+        message(WARNING "TODO: add `__cxa_throw` handler while `-fno-exceptions` option enabled")
+        message(WARNING "TODO: fix code and remove `-fno-exceptions` and `__cxa_throw`")
+        message(WARNING "TODO: fix code and remove `-Wno-write-strings` option")
+        if(WIN32)
+            if(CMAKE_SIZEOF_VOID_P GREATER 4)
+                message(WARNING "TODO: fix code and remove `-fpermissive` option for PE32+ x86_64")
+            endif()
+            if(NOT "${_platform.stdcall_alias}")
+                message(WARNING "TODO: find alternative of `-Wl,--add-stdcall-alias` for old mingw-w64 compilers")
+            endif()
+            if(NOT "${_platform.windres_sz_definition}")
+                message(WARNING "TODO: find alternative of -DTEXT=\\\"TEXT\\\" for `windres`")
+            endif()
+        endif()
+    endif()
+endfunction()
