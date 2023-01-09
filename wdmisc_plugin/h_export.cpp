@@ -29,6 +29,8 @@
 
 #include <extdll.h>
 
+#include <cstring>
+
 #include <h_export.h>
 #include <meta_api.h>
 
@@ -40,9 +42,9 @@ globalvars_t *gpGlobals;
 // Receive engine function table from engine.
 // This appears to be the _first_ DLL routine called by the engine, so we
 // do some setup operations here.
-void WINAPI GiveFnptrsToDll(enginefuncs_t* pengfuncsFromEngine, globalvars_t *pGlobals) {
-    memcpy(&g_engfuncs, pengfuncsFromEngine, sizeof(enginefuncs_t));
-    gpGlobals = pGlobals;
+WINAPI void GiveFnptrsToDll(enginefuncs_t *engine_functions, globalvars_t *global_variables) {
+    ::std::memcpy(&g_engfuncs, engine_functions, sizeof(enginefuncs_t));
+    gpGlobals = global_variables;
     // NOTE!  Have to call logging function _after_ copying into g_engfuncs, so
     // that g_engfuncs.pfnAlertMessage() can be resolved properly, heh. :)
     UTIL_LogPrintf("[%s] dev: called: GiveFnptrsToDll\n", Plugin_info.logtag);

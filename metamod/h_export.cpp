@@ -28,7 +28,6 @@
 */
 
 #include <extdll.h>     // always
-#include <time.h>
 
 #include "h_export.h"   // me
 #include "metamod.h"    // engine_t, etc
@@ -36,24 +35,15 @@
 #include "osdep_p.h"    // get_module_handle_of_memptr
 
 
-// From SDK dlls/h_export.cpp:
-
 #ifdef _WIN32
 //! Required DLL entry point
 // The above SDK comment indicates this routine is required, but the MSDN
 // documentation indicates it's actually optional.  We keep it, though, for
 // completeness.
 // Note! 'extern "C"' needed for mingw compile.
-extern "C" BOOL WINAPI DllMain(
-    HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved
-) {
-    if (fdwReason == DLL_PROCESS_ATTACH) {
-        metamod_handle = hinstDLL;
-    }
-    else if (fdwReason == DLL_PROCESS_DETACH) {
-        /* nothing */
-    }
-    return(TRUE);
+extern "C" WINAPI BOOL DllMain(HINSTANCE handle, DWORD reason, LPVOID) {
+    if (DLL_PROCESS_ATTACH == reason) metamod_handle = handle;
+    return TRUE;
 }
 #elif defined(linux)
 // Linux routines to correspond to ATTACH and DETACH cases above.  These
@@ -69,7 +59,7 @@ void _fini(void) {
 #endif
 
 // Fixed MSVC compiling, by Nikolay "The Storm" Baklicharov.
-#if defined(_WIN32) && ! defined(__GNUC__) && defined(_MSC_VER)
+#if defined(_WIN32) && (! defined(__GNUC__)) && defined(_MSC_VER)
     #pragma comment(linker, "/EXPORT:GiveFnptrsToDll=_GiveFnptrsToDll@8,@1")
     #pragma comment(linker, "/SECTION:.data,RW")
 #endif
@@ -84,26 +74,23 @@ engine_t Engine;
 // This appears to be the _first_ DLL routine called by the engine, so this
 // is where we hook to load all the other DLLs (game, plugins, etc), which
 // is actually all done in meta_startup().
-C_DLLEXPORT void WINAPI GiveFnptrsToDll(
-    enginefuncs_t *pengfuncsFromEngine, globalvars_t *pGlobals
+C_DLLEXPORT WINAPI void GiveFnptrsToDll(
+    enginefuncs_t *engine_functions, globalvars_t *global_variables
 ) {
 #ifdef linux
-    metamod_handle = get_module_handle_of_memptr((void *)&g_engfuncs);
+    metamod_handle = get_module_handle_of_memptr(static_cast<void *>(&g_engfuncs));
 #endif
-    gpGlobals = pGlobals;
-    Engine.funcs = &g_engfuncs;
-    Engine.globals = pGlobals;
-    Engine.info.initialise(pengfuncsFromEngine);
 
-    g_engfuncs.initialise_interface(pengfuncsFromEngine);
+    gpGlobals = global_variables;
+    Engine.funcs = &g_engfuncs;
+    Engine.globals = global_variables;
+    Engine.info.initialise(engine_functions);
+
+    g_engfuncs.initialise_interface(engine_functions);
     // NOTE!  Have to call logging function _after_ initialising g_engfuncs, so
     // that g_engfuncs.pfnAlertMessage() can be resolved properly, heh. :)
     META_DEV("called: GiveFnptrsToDll");
 
     // Load plugins, load game dll.
-    if (! metamod_startup()) {
-        metamod_not_loaded = 1;
-    }
-
-    return;
+    if (! metamod_startup()) metamod_not_loaded = 1;
 }
