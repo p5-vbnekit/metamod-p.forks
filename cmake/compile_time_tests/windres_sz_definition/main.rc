@@ -1,0 +1,22 @@
+VS_VERSION_INFO VERSIONINFO
+    FILEVERSION 1,0,0,0
+    PRODUCTVERSION 1,0,0,0
+BEGIN
+    BLOCK "StringFileInfo"
+    BEGIN
+        BLOCK "040904b0"
+        BEGIN
+            VALUE "Comments", "metamod-p windres_sz_definition test\0"
+            VALUE "CompanyName", "p5 team0"
+            VALUE "FileDescription", "metamod-p windres_sz_definition test\0"
+            VALUE "FileVersion", "1.0.0.0\0"
+            VALUE "InternalName", "metamod-p windres_sz_definition test\0"
+            VALUE "LegalCopyright", "p5 team\0"
+            VALUE "License", "GPL\0"
+            VALUE "OriginalFilename", INTERNAL_NAME_VALUE "\0"
+            VALUE "PrivateBuild", "\0"
+            VALUE "ProductName", "metamod-p windres_sz_definition test\0"
+            VALUE "ProductVersion", "1.0.0.0\0"
+        END
+    END
+END
