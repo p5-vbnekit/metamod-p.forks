@@ -69,7 +69,12 @@ void _fini(void) {
 
 // Fixed MSVC compiling, by Nikolay "The Storm" Baklicharov.
 #if defined(_WIN32) && !defined(__GNUC__) && defined (_MSC_VER)
+#if defined(_WIN64)
+	// Added x86_64 support by Nikita "p5-vbnekit" Pushchin Pushchin
+	#pragma comment(linker, "/EXPORT:GiveFnptrsToDll=GiveFnptrsToDll,@1")
+#else
 	#pragma comment(linker, "/EXPORT:GiveFnptrsToDll=_GiveFnptrsToDll@8,@1")
+#endif
 	#pragma comment(linker, "/SECTION:.data,RW")
 #endif
 
