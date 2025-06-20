@@ -1,0 +1,290 @@
+name: main
+
+on: [push, pull_request]
+
+jobs:
+  prepare_podman:
+    strategy:
+      matrix: { key: [ debian/buster, debian/bullseye, debian/bookworm ] }
+      fail-fast: false
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { path: src }
+      - uses: ./src/.github/actions/podman/prepare
+        with: { key: "${{ matrix.key }}" }
+
+  invoke_podman:
+    strategy:
+      matrix:
+        key: [ debian/buster, debian/bullseye, debian/bookworm ]
+        system: [ linux-gnu, w64-mingw32 ]
+        architecture: [ i686, x86_64 ]
+        mingw_threads: [ "", win32, posix ]
+        exclude:
+          - system: linux-gnu
+            mingw_threads: win32
+          - system: linux-gnu
+            mingw_threads: posix
+          - system: w64-mingw32
+            mingw_threads: ""
+        include:
+          - system: w64-mingw32
+            architecture: i686
+            wine_runtime_path: /usr/i686-w64-mingw32/lib
+          - system: w64-mingw32
+            architecture: x86_64
+            wine_runtime_path: /usr/x86_64-w64-mingw32/lib
+      fail-fast: false
+    needs: prepare_podman
+    runs-on: ubuntu-latest
+    steps:
+      - id: get_cache_path
+        shell: python3 {0}
+        run: |
+          # generating cache path
+          import os
+          import json
+          _matrix = json.loads("""
+          ${{ toJSON(matrix) }}
+          """.strip())
+          assert isinstance(_matrix, dict)
+          _key = _matrix.pop("key")
+          _system = _matrix.pop("system")
+          _architecture = _matrix.pop("architecture")
+          _mingw_threads = _matrix.pop("mingw_threads")
+          _result = f"cache/build/podman/{_key}/{_architecture}-{_system}"
+          if _mingw_threads: _result = f"{_result}-{_mingw_threads}"
+          with open(os.environ["GITHUB_OUTPUT"], "w+") as _stream: print(f"result={_result}", file = _stream)
+      - id: cache
+        uses: actions/cache@v4
+        with:
+          key: build/${{ github.run_id }}
+          path: ${{ steps.get_cache_path.outputs.result }}
+      - if: steps.cache.outputs.cache-hit == 'true'
+        name: Abort on unexpected cache hit
+        shell: python3 {0}
+        run: raise FileExistsError("unexpected cache hit")
+      - uses: actions/checkout@v4
+        with: { path: src }
+      - uses: ./src/.github/actions/podman/invoke
+        with:
+          key: ${{ matrix.key }}
+          system: ${{ matrix.system }}
+          architecture: ${{ matrix.architecture }}
+          mingw_threads: ${{ matrix.mingw_threads }}
+          compiler_flags: "-Wall -Weffc++ -Wextra -Wpedantic"
+          wine_runtime_path: ${{ matrix.wine_runtime_path }}
+          build_directory_path: build
+          source_directory_path: src
+      - name: Generating cache data
+        run: |
+          # generating cache data
+          mkdir --parents -- "${{ steps.get_cache_path.outputs.result }}"
+          tar --create --directory="build/.output" -- . | tar --extract --directory="${{ steps.get_cache_path.outputs.result }}"
+
+  msvc:
+    strategy:
+      matrix: { key: [ x86, x64 ] }
+      fail-fast: false
+    runs-on: windows-latest
+    steps:
+      - id: cache
+        uses: actions/cache@v4
+        with:
+          key: build/${{ github.run_id }}
+          path: cache/build/msvc/${{ matrix.key }}
+      - if: steps.cache.outputs.cache-hit == 'true'
+        name: Abort on unexpected cache hit
+        shell: python3 {0}
+        run: raise FileExistsError("unexpected cache hit")
+      - uses: actions/checkout@v4
+        with: { path: src }
+      - uses: microsoft/setup-msbuild@v2
+        with:
+          msbuild-architecture: ${{ matrix.key }}
+      - run: pip install --upgrade -- requests
+      - name: Building binaries
+        shell: python3 {0}
+        run: |
+          # building binaries
+          import os
+          import sys
+          import contextlib
+          import subprocess
+          sys.path.append(os.path.abspath("src/.github/python/modules"))
+          from ci_helpers import log_group as _log_group_module
+          for _command, _directory in (
+            (("cmake", "-S", "src", "-B", "build", "-DCMAKE_GENERATOR:STRING=Ninja", "-DCMAKE_BUILD_TYPE:STING=Release"), None),
+            (("cmake", "--build", "build", "--parallel"), None),
+            (("ctest", "--output-on-failure", "--parallel", "8", "--test-action", "test"), "build")
+          ):
+            with (
+              contextlib.redirect_stdout(sys.stderr),
+              _log_group_module.make(f"Executing {' '.join(_command)}")
+            ): subprocess.run(
+              _command, cwd = _directory, check = True, stdin = subprocess.DEVNULL
+            )
+      - name: Generating cache data
+        shell: sh -e {0}
+        run: |
+          # generating cache data
+          mkdir --parents -- "cache/build/msvc/${{ matrix.key }}"
+          tar --create --directory="build/.output" -- . | tar --extract --directory="cache/build/msvc/${{ matrix.key }}"
+
+  msys2:
+    strategy:
+      matrix:
+        key: [ mingw32, mingw64, clang64, ucrt64 ]
+        include:
+          - key: mingw32
+            target: i686
+            compiler: gcc
+          - key: mingw64
+            target: x86_64
+            compiler: gcc
+          - key: clang64
+            target: clang-x86_64
+            compiler: gcc
+          - key: ucrt64
+            target: ucrt-x86_64
+            compiler: gcc
+      fail-fast: false
+    runs-on: windows-latest
+    steps:
+      - id: cache
+        uses: actions/cache@v4
+        with:
+          key: build/${{ github.run_id }}
+          path: cache/build/msys2/${{ matrix.key }}
+      - if: steps.cache.outputs.cache-hit == 'true'
+        name: Abort on unexpected cache hit
+        shell: python3 {0}
+        run: raise FileExistsError("unexpected cache hit")
+      - uses: actions/checkout@v4
+        with: { path: src }
+      - uses: msys2/setup-msys2@v2
+        with:
+          msystem: ${{ matrix.key }}
+          install: >-
+            mingw-w64-${{ matrix.target }}-${{ matrix.compiler }}
+            mingw-w64-${{ matrix.target }}-cmake
+            mingw-w64-${{ matrix.target }}-python-requests
+            python
+      - name: Building binaries
+        shell: msys2 {0}
+        run: |
+          # building binaries
+          python3 <<EOF
+          import os
+          import sys
+          import contextlib
+          import subprocess
+          sys.path.append(os.path.abspath("src/.github/python/modules"))
+          from ci_helpers import log_group as _log_group_module
+          for _command, _directory in (
+            ((
+              "cmake", "-S", "src", "-B", "build",
+              "-DCMAKE_BUILD_TYPE:STRING=Release",
+              "-DCMAKE_C_FLAGS:STRING=-Wall -Weffc++ -Wextra -Wpedantic",
+              "-DCMAKE_CXX_FLAGS:STRING=-Wall -Weffc++ -Wextra -Wpedantic"
+            ), None),
+            (("cmake", "--build", "build", "--parallel"), None),
+            (("ctest", "--output-on-failure", "--parallel", "8", "--test-action", "test"), "build")
+          ):
+            with (
+              contextlib.redirect_stdout(sys.stderr),
+              _log_group_module.make(f"Executing {' '.join(_command)}")
+            ): subprocess.run(
+              _command, cwd = _directory, check = True, stdin = subprocess.DEVNULL
+            )
+          EOF
+        continue-on-error: ${{ matrix.key == 'clang64' }}
+      - name: Generating cache data
+        shell: msys2 {0}
+        run: |
+          # generating cache data
+          mkdir --parents -- "cache/build/msys2/${{ matrix.key }}"
+          tar --create --directory="build/.output" -- . | tar --extract --directory="cache/build/msys2/${{ matrix.key }}"
+
+  packages:
+    runs-on: ubuntu-latest
+    needs: [ invoke_podman, msvc, msys2 ]
+    steps:
+      - id: cache
+        uses: actions/cache@v4
+        with:
+          key: packages/${{ github.run_id }}
+          path: cache/packages
+      - if: steps.cache.outputs.cache-hit == 'true'
+        name: Abort on unexpected cache hit
+        shell: python3 {0}
+        run: raise FileExistsError("unexpected cache hit")
+      - uses: actions/checkout@v4
+        with: { path: src }
+      - name: Downloading build cache
+        uses: ./src/.github/actions/download_all_cache
+        with: { key: "build/${{ github.run_id }}"}
+      - name: Abort on build cache not found
+        shell: python3 {0}
+        run: |
+          #abort on build cache not found
+          import os
+          try:
+            assert os.path.isdir("cache/build")
+            assert bool(os.listdir("cache/build"))
+          except AssertionError: raise FileNotFoundError("cache/build/*")
+      - uses: ./src/.github/actions/packages
+        with:
+          output_directory_path: "cache/packages"
+          binaries_directory_path: "cache/build"
+          template_directory_path: "src/doc/package_template"
+
+  artifacts:
+    needs: [ packages ]
+    runs-on: ubuntu-latest
+    steps:
+      - id: cache
+        uses: actions/cache/restore@v4
+        with:
+          key: packages/${{ github.run_id }}
+          path: cache/packages
+          fail-on-cache-miss: true
+      - if: steps.cache.outputs.cache-hit != 'true'
+        name: Abort on cache not found
+        shell: python3 {0}
+        run: raise FileNotFoundError("cache/packages")
+      - uses: actions/upload-artifact@v4
+        with:
+          name: packages
+          path: cache/packages
+
+  release:
+    if: startsWith(github.ref, 'refs/tags/')
+    needs: [ packages ]
+    runs-on: ubuntu-latest
+    steps:
+      - id: cache
+        uses: actions/cache/restore@v4
+        with:
+          key: packages/${{ github.run_id }}
+          path: cache/packages
+          fail-on-cache-miss: true
+      - if: steps.cache.outputs.cache-hit != 'true'
+        name: Abort on cache not found
+        shell: python3 {0}
+        run: raise FileNotFoundError("cache/packages")
+      - name: Generating release assets
+        run: |
+          # generating release assets
+          mkdir release_assets
+          cp cache/packages/podman/debian/buster/i686-linux-gnu.tar.xz release_assets/
+          cp cache/packages/podman/debian/buster/x86_64-linux-gnu.tar.xz release_assets/
+          cp cache/packages/podman/debian/buster/i686-w64-mingw32-win32.zip release_assets/
+          cp cache/packages/podman/debian/buster/x86_64-w64-mingw32-win32.zip release_assets/
+          cp cache/packages/msvc/x86.zip release_assets/i686-msvc.zip
+          cp cache/packages/msvc/x64.zip release_assets/x86_64-msvc.zip
+      - uses: softprops/action-gh-release@v2
+        with:
+          draft: true
+          files: release_assets/*

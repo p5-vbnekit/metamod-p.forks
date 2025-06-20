@@ -1,0 +1,14 @@
+Types: deb deb-src
+URIs: http://deb.debian.org/debian
+Suites: buster buster-updates buster-proposed-updates
+Components: main contrib non-free
+
+Types: deb deb-src
+URIs: http://archive.debian.org/debian
+Suites: buster-backports buster-backports-sloppy
+Components: main contrib non-free
+
+Types: deb deb-src
+URIs: http://deb.debian.org/debian-security
+Suites: buster/updates
+Components: main contrib non-free
